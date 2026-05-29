@@ -155,12 +155,12 @@ jobs:
           done
 
           # Convenience script: source once to add bin/ to PATH
-          cat > "$BUNDLE/setup.sh" << 'EOF'
-#!/bin/bash
-BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$BUNDLE_DIR/bin:$PATH"
-echo "aitool: added $BUNDLE_DIR/bin to PATH"
-EOF
+          {
+            echo '#!/bin/bash'
+            echo 'BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
+            echo 'export PATH="$BUNDLE_DIR/bin:$PATH"'
+            echo 'echo "aitool: added $BUNDLE_DIR/bin to PATH"'
+          } > "$BUNDLE/setup.sh"
           chmod +x "$BUNDLE/setup.sh"
 
           sha256sum "$BUNDLE"/bin/* > "$BUNDLE/SHA256SUMS" 2>/dev/null || true
