@@ -12,14 +12,6 @@ echo " Playwright: ${PLAYWRIGHT_VERSION}"
 echo " Browsers:   ${BROWSERS}"
 echo "========================================"
 
-echo "Installing system dependencies..."
-sudo apt-get update -qq
-sudo apt-get install -y -qq \
-  libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
-  libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 \
-  libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
-  libasound2 libdbus-1-3 libxshmfence1
-
 export PATH="$PWD/build/.node/bin:/usr/bin"
 mkdir -p tmp
 
@@ -40,9 +32,9 @@ pushd build
 echo "Installing @playwright/test@${PLAYWRIGHT_VERSION}..."
 ./.node/bin/npm install "@playwright/test@${PLAYWRIGHT_VERSION}"
 
-echo "Installing browsers: ${BROWSERS}..."
+echo "Installing browsers (with system deps): ${BROWSERS}..."
 export PLAYWRIGHT_BROWSERS_PATH=0
-./.node/bin/npx playwright install ${BROWSERS}
+./.node/bin/npx playwright install --with-deps ${BROWSERS}
 
 cat > playwright << 'WRAPPER'
 #!/bin/bash
