@@ -25,10 +25,27 @@ if [ "$TYPE" = "binary" ]; then
     exit 1
   fi
   ASSET_PATTERN="${ASSET_PATTERN//\{VERSION\}/${VERSION}}"
+  mkdir -p upstream dist
+  echo "Downloading ${ASSET_PATTERN}..."
   wget -q "https://github.com/${REPO}/releases/download/${VERSION}/${ASSET_PATTERN}" \
-       -O "${NAME}-${VERSION}-x86_64-linux.tar.gz"
-  printf 'name=%s\nversion=%s\n' "${NAME}" "${VERSION}" > BUILD_INFO.txt
-  echo "=== Done: ${NAME}-${VERSION}-x86_64-linux.tar.gz ==="
+       -O upstream.tar.gz
+  echo "Extracting..."
+  tar xzf upstream.tar.gz -C upstream --strip-components=1 2>/dev/null || \
+  tar xzf upstream.tar.gz -C upstream
+  BINARY=$(find upstream -type f -name "${NAME}" | head -1)
+  if [ -z "$BINARY" ]; then
+    BINARY=$(find upstream -maxdepth 3 -type f -executable ! -name "*.so*" ! -name "*.md" ! -name "LICENSE*" | head -1)
+  fi
+  if [ -z "$BINARY" ]; then
+    echo "ERROR: Could not find '${NAME}' binary in upstream tarball"
+    find upstream -type f
+    exit 1
+  fi
+  cp "$BINARY" "dist/${NAME}"
+  chmod +x "dist/${NAME}"
+  printf 'name=%s\nversion=%s\n' "${NAME}" "${VERSION}" > dist/BUILD_INFO.txt
+  sha256sum "dist/${NAME}" > dist/SHA256SUMS
+  echo "=== Done: dist/${NAME} (${VERSION}) ==="
   exit 0
 fi
 

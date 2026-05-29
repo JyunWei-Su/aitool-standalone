@@ -82,23 +82,23 @@ jobs:
             "${{ steps.pkg.outputs.repo }}" \
             "${{ steps.pkg.outputs.type }}" \
             "${{ inputs.version }}"
-      - name: Generate checksum
-        run: sha256sum *.tar.gz > SHA256SUMS 2>/dev/null || true
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.package_name }}-x86_64-linux
-          path: |
-            *.tar.gz
-            SHA256SUMS
-            BUILD_INFO.txt
+          path: dist/*
           retention-days: 90
 
   build-custom:
     needs: detect-type
     if: needs.detect-type.outputs.is_custom == 'true'
     runs-on: ubuntu-latest
+    container:
+      image: oraclelinux:8
+      options: --privileged
     steps:
+      - name: Install build tools
+        run: dnf install -y git wget curl tar xz jq findutils sudo
       - uses: actions/checkout@v4
       - name: Build ${{ inputs.package_name }}
         env:

@@ -84,26 +84,26 @@ jobs:
             "${{ matrix.repo }}" \
             "${{ matrix.type }}" \
             "${{ matrix.version || 'latest' }}"
-      - name: Generate checksum
-        run: sha256sum *.tar.gz > SHA256SUMS 2>/dev/null || true
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.name }}-x86_64-linux
-          path: |
-            *.tar.gz
-            SHA256SUMS
-            BUILD_INFO.txt
+          path: dist/*
           retention-days: 90
 
   build-custom:
     needs: load-packages
     if: needs.load-packages.outputs.has_custom == 'true'
     runs-on: ubuntu-latest
+    container:
+      image: oraclelinux:8
+      options: --privileged
     strategy:
       matrix: ${{ fromJson(needs.load-packages.outputs.custom_matrix) }}
       fail-fast: false
     steps:
+      - name: Install build tools
+        run: dnf install -y git wget curl tar xz jq findutils sudo
       - uses: actions/checkout@v4
       - name: Build ${{ matrix.name }}
         run: |
@@ -126,6 +126,47 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: all-packages/
+      - name: Assemble bundle
+        run: |
+          DATESTAMP=$(date +%Y%m%d)
+          BUNDLE="aitool_standalone-${DATESTAMP}"
+          mkdir -p "$BUNDLE/bin" "$BUNDLE/lib"
+
+          for pkg_dir in all-packages/*/; do
+            artifact=$(basename "$pkg_dir")
+
+            if [[ "$artifact" == *"-standalone-x86_64-linux" ]]; then
+              # Custom package: extract tarball into lib/<name>/
+              pkg_name="${artifact%%-standalone-x86_64-linux}"
+              tarball=$(find "$pkg_dir" -maxdepth 1 -name "*.tar.gz" | head -1)
+              mkdir -p "$BUNDLE/lib/$pkg_name"
+              tar xzf "$tarball" -C "$BUNDLE/lib/$pkg_name"
+              # Wrapper in bin/ that delegates to the real wrapper
+              printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/../lib/%s/%s" "$@"\n' \
+                "$pkg_name" "$pkg_name" > "$BUNDLE/bin/$pkg_name"
+              chmod +x "$BUNDLE/bin/$pkg_name"
+
+            elif [[ "$artifact" == *"-x86_64-linux" ]]; then
+              # Binary package: single executable
+              pkg_name="${artifact%%-x86_64-linux}"
+              binary=$(find "$pkg_dir" -maxdepth 1 -type f ! -name "*.txt" ! -name "SHA256SUMS" | head -1)
+              [ -n "$binary" ] && cp "$binary" "$BUNDLE/bin/$pkg_name" && chmod +x "$BUNDLE/bin/$pkg_name"
+            fi
+          done
+
+          # Convenience script: source once to add bin/ to PATH
+          cat > "$BUNDLE/setup.sh" << 'EOF'
+#!/bin/bash
+BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export PATH="$BUNDLE_DIR/bin:$PATH"
+echo "aitool: added $BUNDLE_DIR/bin to PATH"
+EOF
+          chmod +x "$BUNDLE/setup.sh"
+
+          sha256sum "$BUNDLE"/bin/* > "$BUNDLE/SHA256SUMS" 2>/dev/null || true
+          tar czf "${BUNDLE}.tar.gz" "$BUNDLE/"
+          sha256sum "${BUNDLE}.tar.gz" > SHA256SUMS
+
       - name: Build summary
         run: |
           echo "## 本次打包套件" >> $GITHUB_STEP_SUMMARY
@@ -140,18 +181,15 @@ jobs:
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Build date: $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
-      - name: Create bundle
-        run: |
-          DATESTAMP=$(date +%Y%m%d)
-          tar czf "aitool_standalone-bundle-${DATESTAMP}.tar.gz" all-packages/
-          sha256sum "aitool_standalone-bundle-${DATESTAMP}.tar.gz" > SHA256SUMS
+
       - uses: actions/upload-artifact@v4
         with:
           name: aitool_standalone-bundle
           path: |
-            aitool_standalone-bundle-*.tar.gz
+            aitool_standalone-*.tar.gz
             SHA256SUMS
           retention-days: 90
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -175,7 +213,7 @@ jobs:
 
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" \
-            "aitool_standalone-bundle-${DATESTAMP}.tar.gz" \
+            "aitool_standalone-${DATESTAMP}.tar.gz" \
             SHA256SUMS \
             --title "Bundle ${DATESTAMP}" \
             --notes-file "$NOTES" \
