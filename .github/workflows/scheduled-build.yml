@@ -16,7 +16,7 @@ jobs:
       has_custom: ${{ steps.parse.outputs.has_custom }}
       custom_matrix: ${{ steps.parse.outputs.custom_matrix }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - id: parse
         run: |
           MATRIX=$(python3 -c "
@@ -54,7 +54,7 @@ jobs:
       matrix: ${{ fromJson(needs.load-packages.outputs.matrix) }}
       fail-fast: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup Node.js
         if: matrix.type == 'node'
         uses: actions/setup-node@v4
@@ -104,7 +104,7 @@ jobs:
     steps:
       - name: Install build tools
         run: dnf install -y git wget curl tar xz jq findutils sudo gcc gcc-c++ make python3 python3.11 gcc-toolset-12
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build ${{ matrix.name }}
         run: |
           chmod +x ${{ matrix.script }}
