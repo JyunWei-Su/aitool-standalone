@@ -78,7 +78,9 @@ pushd build
 tar czf "../dist/qmd-standalone-${VERSION_TAG}-x86_64-linux.tar.gz" .
 popd
 sha256sum dist/*.tar.gz > dist/SHA256SUMS
-printf 'name=qmd\nversion=%s\n' "${VERSION_TAG}" > dist/BUILD_INFO.txt
+QMD_LICENSE=$( build/.node/bin/node \
+  -e "console.log(require('./build/node_modules/@tobilu/qmd/package.json').license || 'Unknown')" )
+printf 'name=qmd\nversion=%s\nlicense=%s\n' "${VERSION_TAG}" "${QMD_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="
 ls -lh dist/

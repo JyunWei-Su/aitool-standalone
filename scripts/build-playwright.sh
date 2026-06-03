@@ -82,7 +82,8 @@ pushd build
 tar czf "../dist/playwright-standalone-${PLAYWRIGHT_VERSION}-x86_64-linux.tar.gz" .
 popd
 sha256sum dist/*.tar.gz > dist/SHA256SUMS
-printf 'name=playwright\nversion=%s\n' "${PLAYWRIGHT_VERSION}" > dist/BUILD_INFO.txt
+PLAYWRIGHT_LICENSE=$(curl -sL "https://registry.npmjs.org/@playwright/test/${PLAYWRIGHT_VERSION}" | jq -r '.license // "Unknown"')
+printf 'name=playwright\nversion=%s\nlicense=%s\n' "${PLAYWRIGHT_VERSION}" "${PLAYWRIGHT_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="
 ls -lh dist/

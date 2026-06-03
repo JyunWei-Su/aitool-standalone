@@ -41,7 +41,8 @@ chmod +x build/node
 
 echo "Bundling node-standalone-${NODEJS_VERSION}..."
 tar czf "dist/node-standalone-${NODEJS_VERSION}-x86_64-linux.tar.gz" -C build node node-runtime
-printf 'name=node\nversion=%s\n' "${NODEJS_VERSION}" > dist/BUILD_INFO.txt
+NODE_LICENSE=$(curl -sL "https://api.github.com/repos/nodejs/node" | jq -r '.license.spdx_id // "Unknown"')
+printf 'name=node\nversion=%s\nlicense=%s\n' "${NODEJS_VERSION}" "${NODE_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="
 ls -lh dist/

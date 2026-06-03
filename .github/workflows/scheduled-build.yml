@@ -159,6 +159,7 @@ jobs:
             echo '#!/bin/bash'
             echo 'BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"'
             echo 'export PATH="$BUNDLE_DIR/bin:$PATH"'
+            echo 'export PLAYWRIGHT_BROWSERS_PATH="$BUNDLE_DIR/lib/playwright/node_modules/playwright-core/.local-browsers"'
             echo 'echo "aitool: added $BUNDLE_DIR/bin to PATH"'
           } > "$BUNDLE/setup.sh"
           chmod +x "$BUNDLE/setup.sh"
@@ -176,6 +177,7 @@ jobs:
             echo 'endif'
             echo 'if ($?AITOOL_BUNDLE_DIR) then'
             echo '  setenv PATH "$AITOOL_BUNDLE_DIR/bin:$PATH"'
+            echo '  setenv PLAYWRIGHT_BROWSERS_PATH "$AITOOL_BUNDLE_DIR/lib/playwright/node_modules/playwright-core/.local-browsers"'
             echo '  echo "aitool: added $AITOOL_BUNDLE_DIR/bin to PATH"'
             echo 'endif'
           } > "$BUNDLE/setup.csh"
@@ -189,13 +191,14 @@ jobs:
         run: |
           echo "## 本次打包套件" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| 套件 | 版本 |" >> $GITHUB_STEP_SUMMARY
-          echo "|------|------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 套件 | 版本 | License |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|------|---------|" >> $GITHUB_STEP_SUMMARY
           for info in all-packages/*/BUILD_INFO.txt; do
             [ -f "$info" ] || continue
             name=$(grep '^name=' "$info" | cut -d= -f2)
             version=$(grep '^version=' "$info" | cut -d= -f2)
-            echo "| \`${name}\` | \`${version}\` |" >> $GITHUB_STEP_SUMMARY
+            license=$(grep '^license=' "$info" | cut -d= -f2)
+            echo "| \`${name}\` | \`${version}\` | ${license:-Unknown} |" >> $GITHUB_STEP_SUMMARY
           done
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Build date: $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
@@ -218,13 +221,14 @@ jobs:
 
           echo "## 本次打包套件" > "$NOTES"
           echo "" >> "$NOTES"
-          echo "| 套件 | 版本 |" >> "$NOTES"
-          echo "|------|------|" >> "$NOTES"
+          echo "| 套件 | 版本 | License |" >> "$NOTES"
+          echo "|------|------|---------|" >> "$NOTES"
           for info in all-packages/*/BUILD_INFO.txt; do
             [ -f "$info" ] || continue
             name=$(grep '^name=' "$info" | cut -d= -f2)
             version=$(grep '^version=' "$info" | cut -d= -f2)
-            echo "| \`${name}\` | \`${version}\` |" >> "$NOTES"
+            license=$(grep '^license=' "$info" | cut -d= -f2)
+            echo "| \`${name}\` | \`${version}\` | ${license:-Unknown} |" >> "$NOTES"
           done
           echo "" >> "$NOTES"
           echo "Build date: $(date -u '+%Y-%m-%d %H:%M UTC')" >> "$NOTES"

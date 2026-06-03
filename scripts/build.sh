@@ -45,7 +45,8 @@ if [ "$TYPE" = "binary" ]; then
   fi
   cp "$BINARY" "dist/${NAME}"
   chmod +x "dist/${NAME}"
-  printf 'name=%s\nversion=%s\n' "${NAME}" "${VERSION}" > dist/BUILD_INFO.txt
+  LICENSE=$(curl -sL "https://api.github.com/repos/${REPO}" | jq -r '.license.spdx_id // "Unknown"')
+  printf 'name=%s\nversion=%s\nlicense=%s\n' "${NAME}" "${VERSION}" "${LICENSE}" > dist/BUILD_INFO.txt
   sha256sum "dist/${NAME}" > dist/SHA256SUMS
   echo "=== Done: dist/${NAME} (${VERSION}) ==="
   exit 0
