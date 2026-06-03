@@ -31,3 +31,8 @@ packages:
   - name: playwright
     type: custom
     script: scripts/build-playwright.sh
+
+  # ── npx wrapper（自訂腳本）──────────────────────────
+  - name: npx
+    type: custom
+    script: scripts/build-npx.sh

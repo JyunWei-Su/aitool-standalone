@@ -56,6 +56,7 @@ while [ -L "$SOURCE" ]; do
 done
 SCRIPT_PATH="$(cd -- "$(dirname "$SOURCE")" >/dev/null 2>&1; pwd -P)"
 export PATH="$SCRIPT_PATH/.node/bin:$PATH"
+export NODE_PATH="$SCRIPT_PATH/node_modules"
 export PLAYWRIGHT_BROWSERS_PATH="$SCRIPT_PATH/node_modules/playwright-core/.local-browsers"
 exec "$SCRIPT_PATH/node_modules/.bin/playwright" "$@"
 WRAPPER
