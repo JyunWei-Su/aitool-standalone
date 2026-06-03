@@ -9,9 +9,9 @@ GitHub Actions 自動打包離線工具集。本地不需要任何 `npm install`
 | [rg](https://github.com/BurntSushi/ripgrep) | 快速全文搜尋工具（ripgrep），musl 靜態二進位 | binary |
 | [rtk](https://github.com/rtk-ai/rtk) | AI CLI 工具，musl 靜態二進位 | binary |
 | [opencode](https://github.com/anomalyco/opencode) | AI coding agent CLI，GitHub Release 二進位 | binary |
-| [node](https://nodejs.org) | Node.js LTS runtime，完整 Linux x64 runtime | custom |
+| [node](https://github.com/nodejs/node) | Node.js LTS runtime，完整 Linux x64 runtime | custom |
 | [qmd](https://github.com/tobi/qmd) | 本地 CLI 語意搜尋引擎（docs / notes / code） | custom |
-| [playwright](https://playwright.dev) | 含瀏覽器的獨立 Playwright 執行環境 | custom |
+| [playwright](https://github.com/microsoft/playwright) | 含瀏覽器的獨立 Playwright 執行環境 | custom |
 
 ## 使用方式
 
@@ -72,6 +72,7 @@ packages:
   ```
   name=<套件名>
   version=<版本號>
+  license=<SPDX 識別符>
   ```
 
 ## 專案結構

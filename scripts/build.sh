@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# shellcheck source=scripts/lib-license.sh
+source "$(dirname "$0")/lib-license.sh"
 
 NAME="$1"
 REPO="$2"
@@ -45,7 +47,7 @@ if [ "$TYPE" = "binary" ]; then
   fi
   cp "$BINARY" "dist/${NAME}"
   chmod +x "dist/${NAME}"
-  LICENSE=$(curl -sL "https://api.github.com/repos/${REPO}" | jq -r '.license.spdx_id // "Unknown"')
+  LICENSE=$(gh_license "${REPO}")
   printf 'name=%s\nversion=%s\nlicense=%s\n' "${NAME}" "${VERSION}" "${LICENSE}" > dist/BUILD_INFO.txt
   sha256sum "dist/${NAME}" > dist/SHA256SUMS
   echo "=== Done: dist/${NAME} (${VERSION}) ==="

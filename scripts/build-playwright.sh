@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# shellcheck source=scripts/lib-license.sh
+source "$(dirname "$0")/lib-license.sh"
 
 NODEJS_VERSION="${NODEJS_VERSION:-$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')}"
 PLAYWRIGHT_VERSION="${PLAYWRIGHT_VERSION:-$(curl -sL https://registry.npmjs.org/@playwright/test/latest | jq -r '.version')}"
@@ -82,7 +84,7 @@ pushd build
 tar czf "../dist/playwright-standalone-${PLAYWRIGHT_VERSION}-x86_64-linux.tar.gz" .
 popd
 sha256sum dist/*.tar.gz > dist/SHA256SUMS
-PLAYWRIGHT_LICENSE=$(curl -sL "https://registry.npmjs.org/@playwright/test/${PLAYWRIGHT_VERSION}" | jq -r '.license // "Unknown"')
+PLAYWRIGHT_LICENSE=$(gh_license "microsoft/playwright")
 printf 'name=playwright\nversion=%s\nlicense=%s\n' "${PLAYWRIGHT_VERSION}" "${PLAYWRIGHT_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="

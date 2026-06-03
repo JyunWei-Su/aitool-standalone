@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# shellcheck source=scripts/lib-license.sh
+source "$(dirname "$0")/lib-license.sh"
 
 NODEJS_VERSION="${NODEJS_VERSION:-$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')}"
 
@@ -41,7 +43,7 @@ chmod +x build/node
 
 echo "Bundling node-standalone-${NODEJS_VERSION}..."
 tar czf "dist/node-standalone-${NODEJS_VERSION}-x86_64-linux.tar.gz" -C build node node-runtime
-NODE_LICENSE=$(curl -sL "https://api.github.com/repos/nodejs/node" | jq -r '.license.spdx_id // "Unknown"')
+NODE_LICENSE=$(gh_license "nodejs/node")
 printf 'name=node\nversion=%s\nlicense=%s\n' "${NODEJS_VERSION}" "${NODE_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="

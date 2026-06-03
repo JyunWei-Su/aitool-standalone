@@ -1,5 +1,7 @@
 #!/bin/bash
 set -euo pipefail
+# shellcheck source=scripts/lib-license.sh
+source "$(dirname "$0")/lib-license.sh"
 
 NODEJS_VERSION="${NODEJS_VERSION:-$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')}"
 QMD_VERSION="${QMD_VERSION:-latest}"
@@ -78,8 +80,15 @@ pushd build
 tar czf "../dist/qmd-standalone-${VERSION_TAG}-x86_64-linux.tar.gz" .
 popd
 sha256sum dist/*.tar.gz > dist/SHA256SUMS
-QMD_LICENSE=$( build/.node/bin/node \
-  -e "console.log(require('./build/node_modules/@tobilu/qmd/package.json').license || 'Unknown')" )
+QMD_REPO=$(curl -sL "https://registry.npmjs.org/@tobilu/qmd/${VERSION_TAG}" \
+  | jq -r '.repository.url // ""' \
+  | sed 's|.*github\.com/||;s|\.git$||')
+if [ -n "$QMD_REPO" ] && [ "$QMD_REPO" != "null" ]; then
+  QMD_LICENSE=$(gh_license "$QMD_REPO")
+else
+  QMD_LICENSE=$( build/.node/bin/node \
+    -e "console.log(require('./build/node_modules/@tobilu/qmd/package.json').license || 'Unknown')" )
+fi
 printf 'name=qmd\nversion=%s\nlicense=%s\n' "${VERSION_TAG}" "${QMD_LICENSE}" > dist/BUILD_INFO.txt
 
 echo "=== Done ==="
