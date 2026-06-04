@@ -49,21 +49,82 @@ export PYTHON=/usr/bin/python3.11
 export npm_config_python=/usr/bin/python3.11
 ./.node/bin/npm install "$PKG_SPEC"
 
-cat > qmd << 'WRAPPER'
+# Dynamically extract model default URIs from the installed llm.js
+echo "Extracting model defaults from llm.js..."
+cat > /tmp/extract_models.js << 'JSEOF'
+const src = require('fs').readFileSync(
+  './node_modules/@tobilu/qmd/dist/llm.js', 'utf8');
+function extract(name) {
+  const idx = src.indexOf(name);
+  if (idx === -1) return '';
+  const segment = src.slice(idx, idx + 300);
+  const m = segment.match(/hf:[^\s"'`]+/);
+  return m ? m[0] : '';
+}
+console.log(extract('QMD_EMBED_MODEL'));
+console.log(extract('QMD_GENERATE_MODEL'));
+console.log(extract('QMD_RERANK_MODEL'));
+JSEOF
+
+MODEL_LINES=$(./.node/bin/node /tmp/extract_models.js)
+EMBED_URI=$(echo "$MODEL_LINES"   | sed -n '1p')
+GENERATE_URI=$(echo "$MODEL_LINES" | sed -n '2p')
+RERANK_URI=$(echo "$MODEL_LINES"  | sed -n '3p')
+
+echo "  EMBED:    ${EMBED_URI}"
+echo "  GENERATE: ${GENERATE_URI}"
+echo "  RERANK:   ${RERANK_URI}"
+
+# Download GGUF models from HuggingFace and bundle them
+HF_BASE="${HF_ENDPOINT:-https://huggingface.co}"
+mkdir -p models
+
+hf_to_url() {
+  local uri="${1#hf:}"        # strip hf: prefix -> user/repo/file
+  local user="${uri%%/*}"
+  local rest="${uri#*/}"
+  local repo="${rest%%/*}"
+  local file="${rest#*/}"
+  echo "${HF_BASE}/${user}/${repo}/resolve/main/${file}"
+}
+
+for uri in "${EMBED_URI}" "${GENERATE_URI}" "${RERANK_URI}"; do
+  if [ -z "$uri" ]; then
+    echo "WARNING: empty model URI, skipping download"
+    continue
+  fi
+  filename="${uri##*/}"
+  url=$(hf_to_url "$uri")
+  if [ ! -f "models/${filename}" ]; then
+    echo "Downloading ${filename}..."
+    wget --progress=bar:force -O "models/${filename}" "${url}"
+  else
+    echo "Already cached: ${filename}"
+  fi
+done
+
+EMBED_FILENAME="${EMBED_URI##*/}"
+GENERATE_FILENAME="${GENERATE_URI##*/}"
+RERANK_FILENAME="${RERANK_URI##*/}"
+
+cat > qmd << WRAPPER
 #!/bin/bash
 set -eu
-SOURCE="$0"
-while [ -L "$SOURCE" ]; do
-  DIR="$(cd -- "$(dirname "$SOURCE")" >/dev/null 2>&1; pwd -P)"
-  SOURCE="$(readlink "$SOURCE")"
-  case "$SOURCE" in
+SOURCE="\$0"
+while [ -L "\$SOURCE" ]; do
+  DIR="\$(cd -- "\$(dirname "\$SOURCE")" >/dev/null 2>&1; pwd -P)"
+  SOURCE="\$(readlink "\$SOURCE")"
+  case "\$SOURCE" in
     /*) ;;
-    *) SOURCE="$DIR/$SOURCE" ;;
+    *) SOURCE="\$DIR/\$SOURCE" ;;
   esac
 done
-SCRIPT_PATH="$(cd -- "$(dirname "$SOURCE")" >/dev/null 2>&1; pwd -P)"
-export PATH="$SCRIPT_PATH/.node/bin:$PATH"
-exec "$SCRIPT_PATH/node_modules/.bin/qmd" "$@"
+SCRIPT_PATH="\$(cd -- "\$(dirname "\$SOURCE")" >/dev/null 2>&1; pwd -P)"
+export PATH="\$SCRIPT_PATH/.node/bin:\$PATH"
+export QMD_EMBED_MODEL="\${QMD_EMBED_MODEL:-\$SCRIPT_PATH/models/${EMBED_FILENAME}}"
+export QMD_GENERATE_MODEL="\${QMD_GENERATE_MODEL:-\$SCRIPT_PATH/models/${GENERATE_FILENAME}}"
+export QMD_RERANK_MODEL="\${QMD_RERANK_MODEL:-\$SCRIPT_PATH/models/${RERANK_FILENAME}}"
+exec "\$SCRIPT_PATH/node_modules/.bin/qmd" "\$@"
 WRAPPER
 chmod +x qmd
 mkdir -p bin
