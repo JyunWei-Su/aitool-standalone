@@ -198,15 +198,15 @@ jobs:
               esac
             done < "$QMD_NAMES"
             {
-              echo "export QMD_EMBED_MODEL=\"\${QMD_EMBED_MODEL:-\$BUNDLE_DIR/lib/qmd/models/${EMBED_F}}\""
-              echo "export QMD_GENERATE_MODEL=\"\${QMD_GENERATE_MODEL:-\$BUNDLE_DIR/lib/qmd/models/${GEN_F}}\""
-              echo "export QMD_RERANK_MODEL=\"\${QMD_RERANK_MODEL:-\$BUNDLE_DIR/lib/qmd/models/${RERANK_F}}\""
+              echo "export QMD_EMBED_MODEL=\"\$BUNDLE_DIR/lib/qmd/models/${EMBED_F}\""
+              echo "export QMD_GENERATE_MODEL=\"\$BUNDLE_DIR/lib/qmd/models/${GEN_F}\""
+              echo "export QMD_RERANK_MODEL=\"\$BUNDLE_DIR/lib/qmd/models/${RERANK_F}\""
             } >> "$BUNDLE/setup.sh"
             {
               echo "if (\$?AITOOL_BUNDLE_DIR) then"
-              echo "  if (! \$?QMD_EMBED_MODEL)    setenv QMD_EMBED_MODEL    \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${EMBED_F}\""
-              echo "  if (! \$?QMD_GENERATE_MODEL) setenv QMD_GENERATE_MODEL \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${GEN_F}\""
-              echo "  if (! \$?QMD_RERANK_MODEL)   setenv QMD_RERANK_MODEL   \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${RERANK_F}\""
+              echo "  setenv QMD_EMBED_MODEL    \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${EMBED_F}\""
+              echo "  setenv QMD_GENERATE_MODEL \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${GEN_F}\""
+              echo "  setenv QMD_RERANK_MODEL   \"\$AITOOL_BUNDLE_DIR/lib/qmd/models/${RERANK_F}\""
               echo "endif"
             } >> "$BUNDLE/setup.csh"
           fi

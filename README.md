@@ -12,6 +12,8 @@ GitHub Actions 自動打包離線工具集。本地不需要任何 `npm install`
 | [node](https://github.com/nodejs/node) | Node.js LTS runtime，完整 Linux x64 runtime | custom |
 | [qmd](https://github.com/tobi/qmd) | 本地 CLI 語意搜尋引擎（docs / notes / code） | custom |
 | [playwright](https://github.com/microsoft/playwright) | 含瀏覽器的獨立 Playwright 執行環境 | custom |
+| [npx](https://github.com/nodejs/node) | npx wrapper，依附 bundle 內的 Node.js runtime | custom |
+| [obsidian](https://github.com/obsidianmd/obsidian-releases) | 知識管理筆記軟體，Linux AppImage | custom |
 
 ## 使用方式
 
@@ -83,6 +85,7 @@ aitool_standalone/
 ├── scripts/
 │   ├── build-node.sh               # Node.js 自訂建置
 │   ├── build.sh                    # 標準類型通用建置腳本
+│   ├── build-obsidian.sh           # Obsidian AppImage 自訂建置
 │   ├── build-playwright.sh         # Playwright 自訂建置
 │   └── build-qmd.sh                # qmd 自訂建置
 └── .github/workflows/

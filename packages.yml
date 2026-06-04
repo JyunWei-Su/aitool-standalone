@@ -36,3 +36,8 @@ packages:
   - name: npx
     type: custom
     script: scripts/build-npx.sh
+
+  # ── Obsidian（自訂腳本，AppImage）──────────────────
+  - name: obsidian
+    type: custom
+    script: scripts/build-obsidian.sh

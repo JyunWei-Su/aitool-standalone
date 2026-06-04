@@ -117,6 +117,9 @@ export PATH="\$SCRIPT_PATH/.node/bin:\$PATH"
 export QMD_EMBED_MODEL="\${QMD_EMBED_MODEL:-\$SCRIPT_PATH/models/${EMBED_FILENAME}}"
 export QMD_GENERATE_MODEL="\${QMD_GENERATE_MODEL:-\$SCRIPT_PATH/models/${GENERATE_FILENAME}}"
 export QMD_RERANK_MODEL="\${QMD_RERANK_MODEL:-\$SCRIPT_PATH/models/${RERANK_FILENAME}}"
+export QMD_CHUNK_STRATEGY="auto"
+export NODE_LLAMA_CPP_ARGS="--numa 1 --threads 8"
+export NODE_LLAMA_CPP_NO_CUDA=1
 exec "\$SCRIPT_PATH/node_modules/.bin/qmd" "\$@"
 WRAPPER
 chmod +x qmd
