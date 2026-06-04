@@ -58,7 +58,7 @@ function extract(name) {
   const idx = src.indexOf(name);
   if (idx === -1) return '';
   const segment = src.slice(idx, idx + 300);
-  const m = segment.match(/hf:[^\s"'`]+/);
+  const m = segment.match(/hf:[A-Za-z0-9_.\/\-]+/);
   return m ? m[0] : '';
 }
 console.log(extract('QMD_EMBED_MODEL'));
