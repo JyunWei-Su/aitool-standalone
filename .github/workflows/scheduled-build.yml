@@ -136,21 +136,15 @@ jobs:
             artifact=$(basename "$pkg_dir")
 
             if [[ "$artifact" == *"-standalone-x86_64-linux" ]]; then
+              # Custom package: extract tarball into lib/<name>/
               pkg_name="${artifact%%-standalone-x86_64-linux}"
               tarball=$(find "$pkg_dir" -maxdepth 1 -name "*.tar.gz" | head -1)
-              file_count=$(tar tzf "$tarball" | grep -cv '/$')
-              if [ "$file_count" -eq 1 ]; then
-                # Single-file package: extract directly into bin/
-                tar xzf "$tarball" -C "$BUNDLE/bin"
-                chmod +x "$BUNDLE/bin/$pkg_name"
-              else
-                # Multi-file package: extract into lib/ with delegate in bin/
-                mkdir -p "$BUNDLE/lib/$pkg_name"
-                tar xzf "$tarball" -C "$BUNDLE/lib/$pkg_name"
-                printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/../lib/%s/%s" "$@"\n' \
-                  "$pkg_name" "$pkg_name" > "$BUNDLE/bin/$pkg_name"
-                chmod +x "$BUNDLE/bin/$pkg_name"
-              fi
+              mkdir -p "$BUNDLE/lib/$pkg_name"
+              tar xzf "$tarball" -C "$BUNDLE/lib/$pkg_name"
+              # Wrapper in bin/ that delegates to the real wrapper
+              printf '#!/bin/bash\nSCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"\nexec "$SCRIPT_DIR/../lib/%s/%s" "$@"\n' \
+                "$pkg_name" "$pkg_name" > "$BUNDLE/bin/$pkg_name"
+              chmod +x "$BUNDLE/bin/$pkg_name"
 
             elif [[ "$artifact" == *"-x86_64-linux" ]]; then
               # Binary package: single executable
