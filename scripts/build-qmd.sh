@@ -75,18 +75,22 @@ echo "  EMBED:    ${EMBED_URI}"
 echo "  GENERATE: ${GENERATE_URI}"
 echo "  RERANK:   ${RERANK_URI}"
 
-# Download GGUF models from HuggingFace and bundle them
-HF_BASE="${HF_ENDPOINT:-https://huggingface.co}"
+# Download GGUF models via huggingface_hub (handles XET storage correctly)
+# HF_HUB_DISABLE_XET=1 forces standard CDN path, bypassing cas-bridge.xethub.hf.co
+/usr/bin/python3.11 -m ensurepip --upgrade 2>/dev/null || true
+/usr/bin/python3.11 -m pip install -q huggingface_hub
+export HF_HUB_DISABLE_XET=1
 mkdir -p models
 
-hf_to_url() {
-  local uri="${1#hf:}"        # strip hf: prefix -> user/repo/file
-  local user="${uri%%/*}"
-  local rest="${uri#*/}"
-  local repo="${rest%%/*}"
-  local file="${rest#*/}"
-  echo "${HF_BASE}/${user}/${repo}/resolve/main/${file}"
-}
+cat > /tmp/hf_download.py << 'PYEOF'
+import sys
+from huggingface_hub import hf_hub_download
+parts = sys.argv[1].split('/', 2)   # user/repo/filename
+repo_id  = parts[0] + '/' + parts[1]
+filename = parts[2]
+print(f"  {repo_id} / {filename}")
+hf_hub_download(repo_id, filename, local_dir='models')
+PYEOF
 
 for uri in "${EMBED_URI}" "${GENERATE_URI}" "${RERANK_URI}"; do
   if [ -z "$uri" ]; then
@@ -94,10 +98,9 @@ for uri in "${EMBED_URI}" "${GENERATE_URI}" "${RERANK_URI}"; do
     continue
   fi
   filename="${uri##*/}"
-  url=$(hf_to_url "$uri")
   if [ ! -f "models/${filename}" ]; then
     echo "Downloading ${filename}..."
-    curl -fSL --retry 3 --retry-delay 5 -o "models/${filename}" "${url}"
+    /usr/bin/python3.11 /tmp/hf_download.py "${uri#hf:}"
   else
     echo "Already cached: ${filename}"
   fi
