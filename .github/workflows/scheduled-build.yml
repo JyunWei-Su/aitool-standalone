@@ -289,6 +289,6 @@ jobs:
           gh release delete "$TAG" --yes 2>/dev/null || true
           gh release create "$TAG" \
             "${RELEASE_ASSETS[@]}" \
-            --title "aitool-standalone ${DATESTAMP}" \
+            --title "${DATESTAMP}" \
             --notes-file "$NOTES" \
             --repo "${{ github.repository }}"
