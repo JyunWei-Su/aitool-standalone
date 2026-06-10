@@ -1,0 +1,40 @@
+name: Build Neovim for CentOS 7
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/build-nvim-centos7.sh
+      - scripts/lib-license.sh
+      - .github/workflows/build-nvim-centos7.yml
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: container-registry.oracle.com/os/oraclelinux:7
+      options: --privileged
+    steps:
+      - name: Install build tools
+        run: |
+          yum install -y yum-utils
+          yum-config-manager --enable ol7_optional_latest ol7_software_collections ol7_developer_EPEL
+          yum install -y git wget curl tar xz jq findutils sudo which \
+            gettext libtool autoconf automake pkgconfig unzip patch \
+            devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3
+      - uses: actions/checkout@v6
+      - name: Build nvim-centos7
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          chmod +x scripts/build-nvim-centos7.sh
+          bash scripts/build-nvim-centos7.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: nvim-centos7-standalone-x86_64-linux
+          path: dist/*
+          retention-days: 90

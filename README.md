@@ -15,6 +15,11 @@ GitHub Actions 自動打包離線工具集。本地不需要任何 `npm install`
 | [npx](https://github.com/nodejs/node) | npx wrapper，依附 bundle 內的 Node.js runtime | custom |
 | [obsidian](https://github.com/obsidianmd/obsidian-releases) | 知識管理筆記軟體，Linux AppImage | custom |
 | [mdbook](https://github.com/rust-lang/mdBook) | 將 Markdown 轉換成電子書的工具，musl 靜態二進位 | binary |
+| [nvim](https://github.com/neovim/neovim) | Neovim，原始碼建置（Oracle Linux 8 / glibc 2.28） | custom |
+
+### CentOS 7 專用建置
+
+[`build-nvim-centos7.yml`](.github/workflows/build-nvim-centos7.yml) 是獨立 workflow，於 `oraclelinux:7`（glibc 2.17）容器中以 `scripts/build-nvim-centos7.sh` 編譯 Neovim，產出可在 CentOS 7 / Oracle Linux 7 上執行的 `nvim-centos7-standalone-*.tar.gz`。手動於 Actions 頁面 `workflow_dispatch` 觸發，成品以 GitHub Actions artifact 形式上傳，不併入主要的 `aitool-standalone` bundle。
 
 ## 使用方式
 
