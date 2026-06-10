@@ -19,16 +19,7 @@ jobs:
             -v "$PWD:/workspace" -w /workspace \
             -e GH_TOKEN="${{ github.token }}" \
             container-registry.oracle.com/os/oraclelinux:7 \
-            bash -c '
-              set -euo pipefail
-              yum install -y yum-utils
-              yum-config-manager --enable ol7_optional_latest ol7_software_collections ol7_developer_EPEL
-              yum install -y git wget curl tar xz jq findutils sudo which \
-                gettext libtool autoconf automake pkgconfig unzip patch \
-                devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3
-              chmod +x scripts/build-nvim-centos7.sh
-              bash scripts/build-nvim-centos7.sh
-            '
+            bash scripts/build-nvim-centos7.sh
       - name: Upload artifact
         uses: actions/upload-artifact@v6
         with:

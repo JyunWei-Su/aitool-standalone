@@ -1,5 +1,45 @@
 #!/bin/bash
 set -euo pipefail
+
+echo "========================================"
+echo " Setting up CentOS 7 build toolchain"
+echo "========================================"
+
+# The base oraclelinux:7 image only enables ol7_latest; the SCL
+# (devtoolset) and EPEL (cmake3) repos are not predefined, so
+# `yum-config-manager --enable <id>` on those IDs is a silent no-op.
+# Add them explicitly with their real base URLs instead.
+cat > /etc/yum.repos.d/ol7-extra.repo << 'REPOEOF'
+[ol7_optional_latest]
+name=Oracle Linux 7 Optional Latest
+baseurl=https://yum.oracle.com/repo/OracleLinux/OL7/optional/latest/x86_64/
+gpgcheck=1
+gpgkey=https://yum.oracle.com/RPM-GPG-KEY-oracle-ol7
+enabled=1
+
+[ol7_software_collections]
+name=Oracle Linux 7 Software Collections
+baseurl=https://yum.oracle.com/repo/OracleLinux/OL7/SoftwareCollections/x86_64/
+gpgcheck=1
+gpgkey=https://yum.oracle.com/RPM-GPG-KEY-oracle-ol7
+enabled=1
+
+[ol7_developer_EPEL]
+name=Oracle Linux 7 Development Packages (EPEL)
+baseurl=https://yum.oracle.com/repo/OracleLinux/OL7/developer_EPEL/x86_64/
+gpgcheck=1
+gpgkey=https://yum.oracle.com/RPM-GPG-KEY-oracle-ol7
+enabled=1
+REPOEOF
+
+yum install -y git wget curl tar xz jq findutils sudo which \
+  gettext libtool autoconf automake pkgconfig unzip patch \
+  devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3
+
+# yum silently skips packages it cannot find instead of failing the
+# whole command, so verify the critical toolchain packages landed.
+rpm -q devtoolset-11-gcc devtoolset-11-gcc-c++ devtoolset-11-make cmake3
+
 # shellcheck source=scripts/lib-license.sh
 source "$(dirname "$0")/lib-license.sh"
 
