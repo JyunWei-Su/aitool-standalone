@@ -97,7 +97,7 @@ jobs:
     if: needs.load-packages.outputs.has_custom == 'true'
     runs-on: ubuntu-latest
     container:
-      image: oraclelinux:8
+      image: container-registry.oracle.com/os/oraclelinux:8
       options: --privileged
     strategy:
       matrix: ${{ fromJson(needs.load-packages.outputs.custom_matrix) }}
