@@ -11,6 +11,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
       - name: Build nvim-centos7 in oraclelinux:7 container
@@ -26,3 +28,15 @@ jobs:
           name: nvim-centos7-standalone-x86_64-linux
           path: dist/*
           retention-days: 90
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep '^version=' dist/BUILD_INFO.txt | cut -d= -f2)
+          TAG="nvim-centos7-${VERSION}"
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            dist/nvim-centos7-standalone-*.tar.gz dist/SHA256SUMS dist/BUILD_INFO.txt \
+            --title "nvim-centos7 ${VERSION}" \
+            --notes "Neovim ${VERSION} 為 CentOS 7 / Oracle Linux 7（glibc 2.17）建置的獨立版本。" \
+            --repo "${{ github.repository }}"
