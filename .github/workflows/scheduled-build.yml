@@ -119,8 +119,26 @@ jobs:
           path: dist/*
           retention-days: 90
 
+  build-nvim-centos7:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build nvim-centos7 in oraclelinux:7 container
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" -w /workspace \
+            -e GH_TOKEN="${{ github.token }}" \
+            container-registry.oracle.com/os/oraclelinux:7 \
+            bash scripts/build-nvim-centos7.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: nvim-centos7-standalone-x86_64-linux
+          path: dist/*
+          retention-days: 90
+
   bundle:
-    needs: [build, build-custom]
+    needs: [build, build-custom, build-nvim-centos7]
     if: always() && !cancelled()
     runs-on: ubuntu-latest
     permissions:
