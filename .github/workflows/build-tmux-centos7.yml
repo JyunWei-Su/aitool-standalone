@@ -1,0 +1,42 @@
+name: Build tmux for CentOS 7
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/build-tmux-centos7.sh
+      - scripts/lib-license.sh
+      - .github/workflows/build-tmux-centos7.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build tmux-centos7 in oraclelinux:7 container
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" -w /workspace \
+            -e GH_TOKEN="${{ github.token }}" \
+            container-registry.oracle.com/os/oraclelinux:7 \
+            bash scripts/build-tmux-centos7.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: tmux-centos7-standalone-x86_64-linux
+          path: dist/*
+          retention-days: 90
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep '^version=' dist/BUILD_INFO.txt | cut -d= -f2)
+          TAG="tmux-centos7-${VERSION}"
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            dist/tmux-centos7-standalone-*.tar.gz dist/SHA256SUMS dist/BUILD_INFO.txt \
+            --title "tmux-centos7 ${VERSION}" \
+            --notes "tmux ${VERSION} 為 CentOS 7 / Oracle Linux 7（glibc 2.17）建置的獨立版本，libevent/ncurses 皆靜態連結。" \
+            --repo "${{ github.repository }}"
