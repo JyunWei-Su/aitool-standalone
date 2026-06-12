@@ -88,6 +88,7 @@ tar xzf build/ncurses.tar.gz -C build
        --without-shared --without-debug --without-ada \
        --without-manpages --without-tests --without-progs \
        --enable-widec --enable-overwrite \
+       --enable-pc-files --with-pkg-config-libdir="$STAGE/lib/pkgconfig" \
   && make -j"$(nproc)" \
   && printf '#!/bin/sh\nexit 0\n' > misc/run_tic.sh \
   && make install )
