@@ -70,6 +70,14 @@ tar xzf build/libevent.tar.gz -C build
 # (UTF-8) support and --enable-overwrite so headers/libs land directly in
 # $STAGE/include and $STAGE/lib (no ncursesw/ subdir), keeping the tmux
 # configure flags simple.
+#
+# `make install` also compiles+installs ncurses' own terminfo database into
+# $STAGE/share/terminfo via misc/run_tic.sh, but ncurses 6.6's terminfo.src
+# has a 'scrt' entry that overflows tic's legacy entry-size limit and aborts
+# the install. We don't need that database here: tmux only needs the static
+# libs/headers/pkg-config files, and the target CentOS 7 host already has its
+# own terminfo database at runtime. Replace run_tic.sh with a no-op so
+# `make install` skips that step.
 # ---------------------------------------------------------------------------
 echo "Building ncurses ${NCURSES_VERSION} (static)..."
 NCURSES_URL="https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz"
@@ -81,6 +89,7 @@ tar xzf build/ncurses.tar.gz -C build
        --without-manpages --without-tests --without-progs \
        --enable-widec --enable-overwrite \
   && make -j"$(nproc)" \
+  && printf '#!/bin/sh\nexit 0\n' > misc/run_tic.sh \
   && make install )
 
 # tmux's configure.ac probes for the terminfo library under several names
