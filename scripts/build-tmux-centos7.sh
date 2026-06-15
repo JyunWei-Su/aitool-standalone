@@ -84,27 +84,32 @@ tar xzf build/libevent.tar.gz -C build
 # libs/headers/pkg-config files (plus the fallback entries baked in above).
 # Replace run_tic.sh with a no-op so `make install` skips that step.
 # ---------------------------------------------------------------------------
-echo "Building ncurses ${NCURSES_VERSION} (static)..."
 NCURSES_URL="https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz"
 wget -qO build/ncurses.tar.gz "$NCURSES_URL"
+
+# --with-fallbacks below runs MKfallback.sh, which compiles all of
+# misc/terminfo.src with whatever tic/infocmp it finds on PATH into a temp
+# dir before extracting the requested entries. This container's system tic
+# (ncurses 5.x) only supports the legacy 4096-byte terminfo format, and
+# modern terminfo.src entries like 'scrt'/'mintty' overflow that, aborting
+# the whole compile. Do a quick throwaway build of ncurses with `progs`
+# enabled first, just to get a tic/infocmp that supports ncurses 6.1's
+# 32-bit "Extended Number Format" (32768-byte entries), and put it ahead of
+# /usr/bin on PATH for the real build below.
+echo "Building host tic/infocmp (ncurses ${NCURSES_VERSION})..."
+mkdir -p build/host-src
+tar xzf build/ncurses.tar.gz -C build/host-src --strip-components=1
+HOST_NCURSES="$PWD/build/host-ncurses"
+( cd build/host-src \
+  && ./configure --prefix="$HOST_NCURSES" \
+       --without-shared --without-debug --without-ada \
+       --without-manpages --without-tests \
+  && make -j"$(nproc)" \
+  && make install )
+export PATH="$HOST_NCURSES/bin:$PATH"
+
+echo "Building ncurses ${NCURSES_VERSION} (static)..."
 tar xzf build/ncurses.tar.gz -C build
-
-# misc/terminfo.src's 'scrt' (SecureCRT) entry overflows the legacy 4096-byte
-# terminfo format produced by this container's system tic (ncurses 5.x).
-# --with-fallbacks below runs MKfallback.sh, which uses that system tic to
-# compile the whole of terminfo.src into a temp dir before extracting the
-# requested entries; the scrt overflow makes that tic invocation fail and
-# aborts the ncurses build. Drop the entry; we don't need SecureCRT support.
-awk '
-  /^scrt\|/ { skip=1 }
-  skip {
-    if ($0 == "") { skip=0; print; next }
-    next
-  }
-  { print }
-' "build/ncurses-${NCURSES_VERSION}/misc/terminfo.src" > /tmp/terminfo.src.new
-mv /tmp/terminfo.src.new "build/ncurses-${NCURSES_VERSION}/misc/terminfo.src"
-
 ( cd "build/ncurses-${NCURSES_VERSION}" \
   && ./configure --prefix="$STAGE" \
        --without-shared --without-debug --without-ada \
