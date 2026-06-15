@@ -88,6 +88,23 @@ echo "Building ncurses ${NCURSES_VERSION} (static)..."
 NCURSES_URL="https://ftp.gnu.org/gnu/ncurses/ncurses-${NCURSES_VERSION}.tar.gz"
 wget -qO build/ncurses.tar.gz "$NCURSES_URL"
 tar xzf build/ncurses.tar.gz -C build
+
+# misc/terminfo.src's 'scrt' (SecureCRT) entry overflows the legacy 4096-byte
+# terminfo format produced by this container's system tic (ncurses 5.x).
+# --with-fallbacks below runs MKfallback.sh, which uses that system tic to
+# compile the whole of terminfo.src into a temp dir before extracting the
+# requested entries; the scrt overflow makes that tic invocation fail and
+# aborts the ncurses build. Drop the entry; we don't need SecureCRT support.
+awk '
+  /^scrt\|/ { skip=1 }
+  skip {
+    if ($0 == "") { skip=0; print; next }
+    next
+  }
+  { print }
+' "build/ncurses-${NCURSES_VERSION}/misc/terminfo.src" > /tmp/terminfo.src.new
+mv /tmp/terminfo.src.new "build/ncurses-${NCURSES_VERSION}/misc/terminfo.src"
+
 ( cd "build/ncurses-${NCURSES_VERSION}" \
   && ./configure --prefix="$STAGE" \
        --without-shared --without-debug --without-ada \
