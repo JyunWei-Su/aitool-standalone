@@ -44,6 +44,7 @@ yum install -y \
   libXrandr-devel libXfixes-devel libXcursor-devel libXinerama-devel \
   libxcb-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel \
   xcb-util-renderutil-devel xcb-util-wm-devel \
+  libxkbcommon-devel libxkbcommon-x11-devel xkeyboard-config \
   mesa-libGL-devel mesa-libEGL-devel libdrm-devel \
   fontconfig-devel freetype-devel libpng-devel libjpeg-turbo-devel zlib-devel \
   openssl-devel dbus-devel glib2-devel \
@@ -121,7 +122,6 @@ cmake -S "build/qtbase-everywhere-src-${QT_VERSION}" -B build/qtbase-build \
   -DFEATURE_testlib=OFF \
   -DFEATURE_vulkan=OFF \
   -DFEATURE_wayland=OFF \
-  -DFEATURE_xcb=ON \
   -DFEATURE_opengl=ON \
   -DFEATURE_dbus=ON \
   -DFEATURE_network=ON \
