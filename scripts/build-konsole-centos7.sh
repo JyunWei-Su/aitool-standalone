@@ -163,6 +163,19 @@ cmake -S "build/qtsvg-everywhere-src-${QT_VERSION}" -B build/qtsvg-build \
 cmake --build build/qtsvg-build -j"$(nproc)"
 cmake --install build/qtsvg-build
 
+# qtdeclarative (Qt6::Qml) is required by Konsole 26.04.0
+qt_wget "qtdeclarative-everywhere-src-${QT_VERSION}.tar.xz" build/qtdeclarative.tar.xz
+tar xJf build/qtdeclarative.tar.xz -C build
+cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarative-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -GNinja \
+  -DQT_BUILD_TESTS=OFF \
+  -DQT_BUILD_EXAMPLES=OFF
+cmake --build build/qtdeclarative-build -j"$(nproc)"
+cmake --install build/qtdeclarative-build
+
 # --------------------------------------------------------------------------
 # Phase 3: KDE Frameworks 6
 # Build order respects the full dependency chain required by Konsole.
