@@ -69,11 +69,17 @@ tar xzf build/libevent.tar.gz -C build
 # $STAGE/include and $STAGE/lib (no ncursesw/ subdir), keeping the tmux
 # configure flags simple.
 #
-# --with-fallbacks compiles a handful of common terminfo entries directly
-# into libncursesw.a (via infocmp/tic from the yum-installed `ncurses`
-# package), used as a last resort if the target host has no terminfo
-# database at all. This keeps tmux-centos7 a true single-file binary with
-# no bundled share/terminfo or wrapper script.
+# --with-fallbacks compiles common terminfo entries (ncurses 6.6 data,
+# including modern capabilities like XM/Ms) directly into libncursesw.a.
+# --with-terminfo-dirs=/nonexistent prevents ncurses from finding the
+# system terminfo at /usr/share/terminfo (CentOS 7's ncurses 5.9 entries,
+# which lack XM, Ms, etc.) and forces use of these compiled-in entries.
+# Without this, tmux 3.4 falls back to XTGETTCAP queries for missing
+# capabilities, the terminal echoes them as garbage (the stray 'q'
+# characters), and mouse mode + TUI tools cause status-bar corruption.
+# --enable-ext-colors/--enable-ext-mouse enable 256-colour and SGR mouse
+# support in the runtime library. This keeps tmux-centos7 a true
+# single-file binary with no bundled share/terminfo or wrapper script.
 #
 # `make install` also compiles+installs ncurses' own terminfo database into
 # $STAGE/share/terminfo via misc/run_tic.sh, but ncurses 6.6's terminfo.src
@@ -113,8 +119,10 @@ tar xzf build/ncurses.tar.gz -C build
        --without-shared --without-debug --without-ada \
        --without-manpages --without-tests --without-progs \
        --enable-widec --enable-overwrite \
+       --enable-ext-colors --enable-ext-mouse \
        --enable-pc-files --with-pkg-config-libdir="$STAGE/lib/pkgconfig" \
-       --with-fallbacks=screen,screen-256color,xterm,xterm-256color,tmux,tmux-256color,vt100 \
+       --with-terminfo-dirs=/nonexistent \
+       --with-fallbacks=screen,screen-256color,xterm,xterm-256color,tmux,tmux-256color,vt100,linux,ansi \
   && make -j"$(nproc)" \
   && printf '#!/bin/sh\nexit 0\n' > misc/run_tic.sh \
   && make install )
