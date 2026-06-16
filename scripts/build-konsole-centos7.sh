@@ -107,7 +107,7 @@ tar xJf build/freetype.tar.xz -C build
 cmake -S "build/freetype-${FREETYPE_VERSION}" -B build/freetype-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
   -DCMAKE_BUILD_TYPE=Release \
-  -DBUILD_SHARED_LIBS=ON \
+  -DBUILD_SHARED_LIBS=OFF \
   -DFT_DISABLE_HARFBUZZ=TRUE \
   -DFT_DISABLE_BZIP2=TRUE \
   -DFT_REQUIRE_ZLIB=TRUE \
