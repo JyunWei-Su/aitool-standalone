@@ -177,6 +177,27 @@ cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarati
 cmake --build build/qtdeclarative-build -j"$(nproc)"
 cmake --install build/qtdeclarative-build
 
+# qttools (Qt6LinguistTools — lrelease/lupdate) required by ECMPoQmTools
+qt_wget "qttools-everywhere-src-${QT_VERSION}.tar.xz" build/qttools.tar.xz
+tar xJf build/qttools.tar.xz -C build
+cmake -S "build/qttools-everywhere-src-${QT_VERSION}" -B build/qttools-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -GNinja \
+  -DQT_BUILD_TESTS=OFF \
+  -DQT_BUILD_EXAMPLES=OFF \
+  -DFEATURE_assistant=OFF \
+  -DFEATURE_clang=OFF \
+  -DFEATURE_qdoc=OFF \
+  -DFEATURE_designer=OFF \
+  -DFEATURE_pixeltool=OFF \
+  -DFEATURE_kmap2qmap=OFF \
+  -DFEATURE_qtplugininfo=OFF \
+  -DFEATURE_qtdiag=OFF
+cmake --build build/qttools-build -j"$(nproc)"
+cmake --install build/qttools-build
+
 # --------------------------------------------------------------------------
 # Phase 3: KDE Frameworks 6
 # Build order respects the full dependency chain required by Konsole.
