@@ -173,7 +173,9 @@ cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarati
   -DCMAKE_BUILD_TYPE=Release \
   -GNinja \
   -DQT_BUILD_TESTS=OFF \
-  -DQT_BUILD_EXAMPLES=OFF
+  -DQT_BUILD_EXAMPLES=OFF \
+  -DFEATURE_quick=ON \
+  -DFEATURE_quickwidgets=ON
 cmake --build build/qtdeclarative-build -j"$(nproc)"
 cmake --install build/qtdeclarative-build
 
