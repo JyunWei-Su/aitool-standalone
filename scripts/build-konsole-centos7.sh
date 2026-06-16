@@ -164,7 +164,26 @@ cmake -S "build/qtsvg-everywhere-src-${QT_VERSION}" -B build/qtsvg-build \
 cmake --build build/qtsvg-build -j"$(nproc)"
 cmake --install build/qtsvg-build
 
-# qtdeclarative (Qt6::Qml) is required by Konsole 26.04.0
+# qtshadertools: provides Qt Shader Baker and RHI shader compilation support.
+# Qt Quick's cmake feature check looks for Qt6ShaderTools at configure time;
+# without it, the 'quick' feature can be silently disabled in qtdeclarative.
+qt_wget "qtshadertools-everywhere-src-${QT_VERSION}.tar.xz" build/qtshadertools.tar.xz
+tar xJf build/qtshadertools.tar.xz -C build
+cmake -S "build/qtshadertools-everywhere-src-${QT_VERSION}" -B build/qtshadertools-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -GNinja \
+  -DQT_BUILD_TESTS=OFF \
+  -DQT_BUILD_EXAMPLES=OFF
+cmake --build build/qtshadertools-build -j"$(nproc)"
+cmake --install build/qtshadertools-build
+
+# qtdeclarative (Qt6::Qml + Qt6::Quick) is required by Konsole 26.04.0
+# INPUT_quick / INPUT_quickwidgets are the cmake input variables that Qt's
+# feature system checks when FEATURE_quick is declared PRIVATE (the PRIVATE
+# keyword makes the feature non-settable via -DFEATURE_quick on some Qt
+# versions; INPUT_ variables bypass that restriction).
 qt_wget "qtdeclarative-everywhere-src-${QT_VERSION}.tar.xz" build/qtdeclarative.tar.xz
 tar xJf build/qtdeclarative.tar.xz -C build
 cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarative-build \
@@ -175,9 +194,21 @@ cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarati
   -DQT_BUILD_TESTS=OFF \
   -DQT_BUILD_EXAMPLES=OFF \
   -DFEATURE_quick=ON \
-  -DFEATURE_quickwidgets=ON
+  -DFEATURE_quickwidgets=ON \
+  -DINPUT_quick=yes \
+  -DINPUT_quickwidgets=yes
 cmake --build build/qtdeclarative-build -j"$(nproc)"
 cmake --install build/qtdeclarative-build
+
+echo "=== Qt cmake modules after qtdeclarative install ==="
+find "$STAGE/lib/cmake" -maxdepth 1 -type d -name "Qt6*" | sort || true
+if [ ! -f "$STAGE/lib/cmake/Qt6Quick/Qt6QuickConfig.cmake" ]; then
+  echo "ERROR: Qt6QuickConfig.cmake was not installed — Quick module was not built!" >&2
+  echo "Installed Qt6 cmake modules:" >&2
+  find "$STAGE/lib/cmake" -maxdepth 1 -type d -name "Qt6*" | sort >&2
+  exit 1
+fi
+echo "Qt6Quick: OK"
 
 # qttools (Qt6LinguistTools — lrelease/lupdate) required by ECMPoQmTools
 qt_wget "qttools-everywhere-src-${QT_VERSION}.tar.xz" build/qttools.tar.xz
