@@ -149,6 +149,7 @@ tar xzf build/tmux.tar.gz -C build
   && export CPPFLAGS="-I$STAGE/include" \
   && export LDFLAGS="-L$STAGE/lib" \
   && ./configure --prefix="$PWD/dist-install" \
+       --with-TERM=screen-256color \
   && make -j"$(nproc)" \
   && make install )
 
