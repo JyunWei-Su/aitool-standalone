@@ -3,6 +3,7 @@ set -euo pipefail
 
 # Version matrix — all overridable via environment variables
 CMAKE_VERSION="${CMAKE_VERSION:-3.29.6}"
+FREETYPE_VERSION="${FREETYPE_VERSION:-2.13.3}"
 QT_VERSION="${QT_VERSION:-6.7.3}"
 KF_VERSION="${KF_VERSION:-6.12.0}"
 KONSOLE_VERSION="${KONSOLE_VERSION:-26.04.0}"
@@ -70,10 +71,11 @@ mkdir -p "$STAGE"
 
 echo "========================================"
 echo " Konsole Standalone Builder (CentOS 7 / glibc 2.17)"
-echo " cmake:   ${CMAKE_VERSION}"
-echo " Qt:      ${QT_VERSION}"
-echo " KF6:     ${KF_VERSION}"
-echo " Konsole: ${KONSOLE_VERSION}"
+echo " cmake:     ${CMAKE_VERSION}"
+echo " FreeType:  ${FREETYPE_VERSION}"
+echo " Qt:        ${QT_VERSION}"
+echo " KF6:       ${KF_VERSION}"
+echo " Konsole:   ${KONSOLE_VERSION}"
 echo "========================================"
 
 # --------------------------------------------------------------------------
@@ -92,6 +94,26 @@ tar xzf build/cmake.tar.gz -C build
 export PATH="$STAGE/bin:$PATH"
 export PKG_CONFIG_PATH="$STAGE/lib/pkgconfig:$STAGE/lib64/pkgconfig"
 echo "cmake: $(cmake --version | head -1)"
+
+# --------------------------------------------------------------------------
+# Phase 1.5: FreeType from source
+# CentOS 7 ships FreeType 2.8.0; Qt 6.7 uses FT_Done_MM_Var added in 2.9.
+# Build without HarfBuzz to avoid the FreeType↔HarfBuzz circular dependency.
+# --------------------------------------------------------------------------
+echo "--- Phase 1.5: FreeType ${FREETYPE_VERSION} ---"
+wget -qO build/freetype.tar.xz \
+  "https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.xz"
+tar xJf build/freetype.tar.xz -C build
+cmake -S "build/freetype-${FREETYPE_VERSION}" -B build/freetype-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DBUILD_SHARED_LIBS=ON \
+  -DFT_DISABLE_HARFBUZZ=TRUE \
+  -DFT_REQUIRE_ZLIB=TRUE \
+  -DFT_REQUIRE_PNG=TRUE \
+  -DFT_REQUIRE_BZIP2=TRUE
+cmake --build build/freetype-build -j"$(nproc)"
+cmake --install build/freetype-build
 
 # --------------------------------------------------------------------------
 # Phase 2: Qt 6 (qtbase + qtsvg)
