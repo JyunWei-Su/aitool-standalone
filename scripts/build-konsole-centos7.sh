@@ -100,8 +100,16 @@ echo "cmake: $(cmake --version | head -1)"
 echo "--- Phase 2: Qt ${QT_VERSION} ---"
 QT_MM="${QT_VERSION%.*}"   # e.g. 6.7
 
-wget -qO build/qtbase.tar.xz \
-  "https://download.qt.io/official_releases/qt/${QT_MM}/${QT_VERSION}/submodules/qtbase-everywhere-src-${QT_VERSION}.tar.xz"
+# Qt releases are eventually moved from official_releases/ to archive/; try both.
+qt_wget() {
+  local file="$1" dest="$2"
+  wget -qO "$dest" \
+    "https://download.qt.io/official_releases/qt/${QT_MM}/${QT_VERSION}/submodules/${file}" \
+  || wget -qO "$dest" \
+    "https://download.qt.io/archive/qt/${QT_MM}/${QT_VERSION}/submodules/${file}"
+}
+
+qt_wget "qtbase-everywhere-src-${QT_VERSION}.tar.xz" build/qtbase.tar.xz
 tar xJf build/qtbase.tar.xz -C build
 cmake -S "build/qtbase-everywhere-src-${QT_VERSION}" -B build/qtbase-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
@@ -121,8 +129,7 @@ cmake -S "build/qtbase-everywhere-src-${QT_VERSION}" -B build/qtbase-build \
 cmake --build build/qtbase-build -j"$(nproc)"
 cmake --install build/qtbase-build
 
-wget -qO build/qtsvg.tar.xz \
-  "https://download.qt.io/official_releases/qt/${QT_MM}/${QT_VERSION}/submodules/qtsvg-everywhere-src-${QT_VERSION}.tar.xz"
+qt_wget "qtsvg-everywhere-src-${QT_VERSION}.tar.xz" build/qtsvg.tar.xz
 tar xJf build/qtsvg.tar.xz -C build
 cmake -S "build/qtsvg-everywhere-src-${QT_VERSION}" -B build/qtsvg-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
