@@ -1,0 +1,42 @@
+name: Build Konsole for CentOS 7
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - scripts/build-konsole-centos7.sh
+      - scripts/lib-license.sh
+      - .github/workflows/build-konsole-centos7.yml
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build konsole-centos7 in oraclelinux:7 container
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" -w /workspace \
+            -e GH_TOKEN="${{ github.token }}" \
+            container-registry.oracle.com/os/oraclelinux:7 \
+            bash scripts/build-konsole-centos7.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: konsole-centos7-standalone-x86_64-linux
+          path: dist/*
+          retention-days: 90
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep '^version=' dist/BUILD_INFO.txt | cut -d= -f2)
+          TAG="konsole-centos7-${VERSION}"
+          gh release delete "$TAG" --yes 2>/dev/null || true
+          gh release create "$TAG" \
+            dist/konsole-centos7-standalone-*.tar.gz dist/SHA256SUMS dist/BUILD_INFO.txt \
+            --title "konsole-centos7 ${VERSION}" \
+            --notes "Konsole ${VERSION} 為 CentOS 7 / Oracle Linux 7（glibc 2.17）建置的獨立版本，Qt 6 及 KDE Frameworks 6 函式庫皆隨附其中。" \
+            --repo "${{ github.repository }}"
