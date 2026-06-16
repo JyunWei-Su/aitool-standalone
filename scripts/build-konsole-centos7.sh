@@ -109,9 +109,9 @@ cmake -S "build/freetype-${FREETYPE_VERSION}" -B build/freetype-build \
   -DCMAKE_BUILD_TYPE=Release \
   -DBUILD_SHARED_LIBS=ON \
   -DFT_DISABLE_HARFBUZZ=TRUE \
+  -DFT_DISABLE_BZIP2=TRUE \
   -DFT_REQUIRE_ZLIB=TRUE \
-  -DFT_REQUIRE_PNG=TRUE \
-  -DFT_REQUIRE_BZIP2=TRUE
+  -DFT_REQUIRE_PNG=TRUE
 cmake --build build/freetype-build -j"$(nproc)"
 cmake --install build/freetype-build
 
