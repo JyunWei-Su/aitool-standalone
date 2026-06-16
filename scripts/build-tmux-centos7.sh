@@ -22,7 +22,7 @@ yum install -y git wget curl tar gzip xz jq findutils gcc make pkgconfig bison g
 # shellcheck source=scripts/lib-license.sh
 source "$(dirname "$0")/lib-license.sh"
 
-TMUX_VERSION="${TMUX_VERSION:-3.3a}"
+TMUX_VERSION="${TMUX_VERSION:-3.4}"
 
 LIBEVENT_TAG="${LIBEVENT_VERSION:-$(curl -sL \
   ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} \
