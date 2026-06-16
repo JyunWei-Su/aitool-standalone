@@ -22,9 +22,7 @@ yum install -y git wget curl tar gzip xz jq findutils gcc make pkgconfig bison g
 # shellcheck source=scripts/lib-license.sh
 source "$(dirname "$0")/lib-license.sh"
 
-TMUX_VERSION="${TMUX_VERSION:-$(curl -sL \
-  ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} \
-  "https://api.github.com/repos/tmux/tmux/releases/latest" | jq -r .tag_name)}"
+TMUX_VERSION="${TMUX_VERSION:-3.3a}"
 
 LIBEVENT_TAG="${LIBEVENT_VERSION:-$(curl -sL \
   ${GH_TOKEN:+-H "Authorization: Bearer ${GH_TOKEN}"} \
@@ -116,7 +114,7 @@ tar xzf build/ncurses.tar.gz -C build
        --without-manpages --without-tests --without-progs \
        --enable-widec --enable-overwrite \
        --enable-pc-files --with-pkg-config-libdir="$STAGE/lib/pkgconfig" \
-       --with-fallbacks=screen,screen-256color,xterm,xterm-256color,vt100 \
+       --with-fallbacks=screen,screen-256color,xterm,xterm-256color,tmux,tmux-256color,vt100 \
   && make -j"$(nproc)" \
   && printf '#!/bin/sh\nexit 0\n' > misc/run_tic.sh \
   && make install )
