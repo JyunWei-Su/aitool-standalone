@@ -70,6 +70,8 @@ mkdir -p build dist
 STAGE="$PWD/build/staging"
 mkdir -p "$STAGE"
 KF_CMAKE_PREFIX_PATH="$STAGE;$STAGE/lib64/cmake;$STAGE/lib/cmake"
+KF_ENV_PREFIX_PATH="$STAGE:$STAGE/lib64/cmake:$STAGE/lib/cmake"
+export CMAKE_PREFIX_PATH="$KF_ENV_PREFIX_PATH"
 
 echo "========================================"
 echo " Konsole Standalone Builder (CentOS 7 / glibc 2.17)"
@@ -369,6 +371,8 @@ cmake_package_dir() {
 }
 
 build_kf extra-cmake-modules
+require_cmake_package KF6
+KF6_DIR="$(cmake_package_dir KF6)"
 build_kf karchive -DWITH_BZIP2=OFF -DWITH_LIBLZMA=OFF -DWITH_LIBZSTD=OFF
 build_kf kcodecs
 require_cmake_package KF6Codecs
@@ -412,10 +416,15 @@ echo "--- Phase 4: Konsole ${KONSOLE_VERSION} ---"
 wget -qO build/konsole.tar.gz \
   "https://github.com/KDE/konsole/archive/refs/tags/v${KONSOLE_VERSION}.tar.gz"
 tar xzf build/konsole.tar.gz -C build
+echo "Konsole CMAKE_PREFIX_PATH: ${KF_CMAKE_PREFIX_PATH}"
+echo "Konsole KF6_DIR: ${KF6_DIR}"
+echo "Konsole KF6Notifications_DIR: ${KF6Notifications_DIR}"
 cmake -S "build/konsole-${KONSOLE_VERSION}" -B build/konsole-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
   -DCMAKE_PREFIX_PATH="$KF_CMAKE_PREFIX_PATH" \
-  -DKF6Notifications_DIR="$KF6Notifications_DIR" \
+  -DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
+  -DKF6_DIR:PATH="$KF6_DIR" \
+  -DKF6Notifications_DIR:PATH="$KF6Notifications_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
   -GNinja \
   -DBUILD_TESTING=OFF \
