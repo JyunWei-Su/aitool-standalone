@@ -278,6 +278,7 @@ build_kf() {
     -GNinja \
     -DBUILD_TESTING=OFF \
     -DBUILD_QCH=OFF \
+    -DWITH_WAYLAND=OFF \
     "$@"
   cmake --build "build/${name}-build" -j"$(nproc)"
   cmake --install "build/${name}-build"
