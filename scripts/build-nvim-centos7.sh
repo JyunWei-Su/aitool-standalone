@@ -82,10 +82,21 @@ make install
 cd ..
 
 echo "Packaging..."
-mkdir -p build/pkg/bin build/pkg/share/nvim build/pkg/lib
+mkdir -p build/pkg/bin build/pkg/share/nvim
 cp build/dist-install/bin/nvim build/pkg/bin/nvim
 cp -r build/dist-install/share/nvim/runtime build/pkg/share/nvim/runtime
-cp -r build/dist-install/lib/nvim build/pkg/lib/nvim
+for nvim_libdir in lib lib64; do
+  if [ -d "build/dist-install/${nvim_libdir}/nvim" ]; then
+    mkdir -p "build/pkg/${nvim_libdir}"
+    cp -r "build/dist-install/${nvim_libdir}/nvim" "build/pkg/${nvim_libdir}/nvim"
+  fi
+done
+if ! find build/pkg -path '*/nvim/parser/lua.so' -type f | grep -q .; then
+  echo "ERROR: bundled Lua treesitter parser not found under build/pkg" >&2
+  echo "Installed parser directories:" >&2
+  find build/dist-install -path '*/nvim/parser' -type d -print >&2 || true
+  exit 1
+fi
 
 # OL7's ncurses (5.9, ~2011) terminfo lacks the "Ms" (OSC 52 clipboard)
 # capability. Without it, Neovim queries the terminal directly on startup via
