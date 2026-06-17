@@ -4,6 +4,7 @@ set -euo pipefail
 # Version matrix — all overridable via environment variables
 CMAKE_VERSION="${CMAKE_VERSION:-3.29.6}"
 FREETYPE_VERSION="${FREETYPE_VERSION:-2.13.3}"
+ICU_VERSION="${ICU_VERSION:-76.1}"
 QT_VERSION="${QT_VERSION:-6.7.3}"
 KF_VERSION="${KF_VERSION:-6.12.0}"
 KONSOLE_VERSION="${KONSOLE_VERSION:-26.04.0}"
@@ -73,6 +74,7 @@ echo "========================================"
 echo " Konsole Standalone Builder (CentOS 7 / glibc 2.17)"
 echo " cmake:     ${CMAKE_VERSION}"
 echo " FreeType:  ${FREETYPE_VERSION}"
+echo " ICU:       ${ICU_VERSION}"
 echo " Qt:        ${QT_VERSION}"
 echo " KF6:       ${KF_VERSION}"
 echo " Konsole:   ${KONSOLE_VERSION}"
@@ -117,6 +119,23 @@ cmake --build build/freetype-build -j"$(nproc)"
 cmake --install build/freetype-build
 
 # --------------------------------------------------------------------------
+# Phase 1.55: ICU from source
+# Konsole 26.04 requires ICU >= 61.0.  CentOS 7 ships an older ICU, so build a
+# private copy and bundle its shared libraries with the final package.
+# --------------------------------------------------------------------------
+echo "--- Phase 1.55: ICU ${ICU_VERSION} ---"
+ICU_TAG="release-${ICU_VERSION//./-}"
+ICU_TARBALL_VERSION="${ICU_VERSION//./_}"
+wget -qO build/icu.tar.gz \
+  "https://github.com/unicode-org/icu/releases/download/${ICU_TAG}/icu4c-${ICU_TARBALL_VERSION}-src.tgz"
+tar xzf build/icu.tar.gz -C build
+( cd build/icu/source \
+  && ./configure --prefix="$STAGE" --disable-samples --disable-tests \
+  && make -j"$(nproc)" \
+  && make install )
+export ICU_ROOT="$STAGE"
+
+# --------------------------------------------------------------------------
 # Phase 1.6: xcb-util-cursor from source
 # Qt 6.5+ xcb platform plugin requires xcb-cursor; not packaged in OL7.
 # Build from source so Qt finds it via PKG_CONFIG_PATH at configure time.
@@ -132,9 +151,11 @@ tar xzf build/xcb-util-cursor.tar.gz -C build
   && make install )
 
 # --------------------------------------------------------------------------
-# Phase 2: Qt 6 (qtbase + qtsvg)
+# Phase 2: Qt 6 (qtbase + qtsvg + qt5compat + qtmultimedia)
 # qtbase covers Core, Gui, Widgets, DBus, Network, PrintSupport, and the
-# xcb platform plugin for X11.  qtsvg is required for KDE icon themes.
+# xcb platform plugin for X11.  qtsvg is required for KDE icon themes, and
+# KIO needs Qt5Compat/Test.  Konsole 26.04 links Qt Multimedia for terminal
+# bell/audio support.
 # --------------------------------------------------------------------------
 echo "--- Phase 2: Qt ${QT_VERSION} ---"
 QT_MM="${QT_VERSION%.*}"   # e.g. 6.7
@@ -157,7 +178,6 @@ cmake -S "build/qtbase-everywhere-src-${QT_VERSION}" -B build/qtbase-build \
   -DQT_BUILD_TESTS=OFF \
   -DQT_BUILD_EXAMPLES=OFF \
   -DFEATURE_sql=OFF \
-  -DFEATURE_testlib=OFF \
   -DFEATURE_vulkan=OFF \
   -DFEATURE_wayland=OFF \
   -DFEATURE_opengl=ON \
@@ -178,6 +198,18 @@ cmake -S "build/qtsvg-everywhere-src-${QT_VERSION}" -B build/qtsvg-build \
   -DQT_BUILD_EXAMPLES=OFF
 cmake --build build/qtsvg-build -j"$(nproc)"
 cmake --install build/qtsvg-build
+
+qt_wget "qt5compat-everywhere-src-${QT_VERSION}.tar.xz" build/qt5compat.tar.xz
+tar xJf build/qt5compat.tar.xz -C build
+cmake -S "build/qt5compat-everywhere-src-${QT_VERSION}" -B build/qt5compat-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -GNinja \
+  -DQT_BUILD_TESTS=OFF \
+  -DQT_BUILD_EXAMPLES=OFF
+cmake --build build/qt5compat-build -j"$(nproc)"
+cmake --install build/qt5compat-build
 
 # qtshadertools: provides Qt Shader Baker and RHI shader compilation support.
 # Qt Quick's cmake feature check looks for Qt6ShaderTools at configure time;
@@ -214,6 +246,18 @@ cmake -S "build/qtdeclarative-everywhere-src-${QT_VERSION}" -B build/qtdeclarati
   -DINPUT_quickwidgets=yes
 cmake --build build/qtdeclarative-build -j"$(nproc)"
 cmake --install build/qtdeclarative-build
+
+qt_wget "qtmultimedia-everywhere-src-${QT_VERSION}.tar.xz" build/qtmultimedia.tar.xz
+tar xJf build/qtmultimedia.tar.xz -C build
+cmake -S "build/qtmultimedia-everywhere-src-${QT_VERSION}" -B build/qtmultimedia-build \
+  -DCMAKE_INSTALL_PREFIX="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -GNinja \
+  -DQT_BUILD_TESTS=OFF \
+  -DQT_BUILD_EXAMPLES=OFF
+cmake --build build/qtmultimedia-build -j"$(nproc)"
+cmake --install build/qtmultimedia-build
 
 echo "=== Qt cmake modules after qtdeclarative install ==="
 find "$STAGE/lib/cmake" -maxdepth 1 -type d -name "Qt6*" | sort || true
@@ -285,6 +329,8 @@ build_kf() {
 }
 
 build_kf extra-cmake-modules
+build_kf karchive -DWITH_BZIP2=OFF -DWITH_LIBLZMA=OFF -DWITH_LIBZSTD=OFF
+build_kf kcodecs
 build_kf kcoreaddons
 build_kf ki18n
 build_kf kconfig
@@ -302,6 +348,10 @@ build_kf kservice
 build_kf kglobalaccel
 build_kf kitemviews
 build_kf kiconthemes
+build_kf kpackage
+build_kf attica
+build_kf syndication
+build_kf knewstuff
 build_kf knotifications
 build_kf ktextwidgets
 build_kf kxmlgui
@@ -361,6 +411,16 @@ if [ -d "$STAGE/lib/qt6/plugins" ]; then
   cp -r "$STAGE/lib/qt6/plugins" "$PKG/plugins"
 fi
 
+# Qt/KF QML modules used by KNewStuff.
+if [ -d "$STAGE/qml" ]; then
+  cp -r "$STAGE/qml" "$PKG/qml"
+fi
+
+# Helper executables installed by Qt/KF.
+if [ -d "$STAGE/libexec" ]; then
+  cp -r "$STAGE/libexec" "$PKG/libexec"
+fi
+
 # KF6 plugins (kio workers, kparts components, etc.)
 for kf_plugin_dir in kf6 kio kparts; do
   for base in "$STAGE/lib/qt6/plugins/$kf_plugin_dir" "$STAGE/plugins/$kf_plugin_dir"; do
@@ -372,7 +432,7 @@ for kf_plugin_dir in kf6 kio kparts; do
 done
 
 # Application data (color schemes, session profiles, notification configs)
-for d in konsole kconf_update knotifications6 kservices6 kservicetypes6; do
+for d in konsole kconf_update knotifications6 kservices6 kservicetypes6 knewstuff6 kpackage; do
   [ -d "$STAGE/share/$d" ] && cp -r "$STAGE/share/$d" "$PKG/share/"
 done
 
@@ -387,6 +447,7 @@ cat > "$PKG/konsole-centos7" << 'WRAPPER'
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 export LD_LIBRARY_PATH="$SCRIPT_DIR/lib:${LD_LIBRARY_PATH:-}"
 export QT_PLUGIN_PATH="$SCRIPT_DIR/plugins"
+export QML2_IMPORT_PATH="$SCRIPT_DIR/qml:${QML2_IMPORT_PATH:-}"
 export XDG_DATA_DIRS="$SCRIPT_DIR/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"
 exec "$SCRIPT_DIR/bin/konsole" "$@"
 WRAPPER
