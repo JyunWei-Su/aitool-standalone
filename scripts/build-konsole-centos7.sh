@@ -69,6 +69,7 @@ rm -rf build dist
 mkdir -p build dist
 STAGE="$PWD/build/staging"
 mkdir -p "$STAGE"
+KF_CMAKE_PREFIX_PATH="$STAGE;$STAGE/lib64/cmake;$STAGE/lib/cmake"
 
 echo "========================================"
 echo " Konsole Standalone Builder (CentOS 7 / glibc 2.17)"
@@ -317,7 +318,7 @@ build_kf() {
   tar xzf "build/${name}.tar.gz" -C build
   cmake -S "build/${name}-${KF_VERSION}" -B "build/${name}-build" \
     -DCMAKE_INSTALL_PREFIX="$STAGE" \
-    -DCMAKE_PREFIX_PATH="$STAGE" \
+    -DCMAKE_PREFIX_PATH="$KF_CMAKE_PREFIX_PATH" \
     -DCMAKE_BUILD_TYPE=Release \
     -GNinja \
     -DBUILD_TESTING=OFF \
@@ -328,9 +329,19 @@ build_kf() {
   cmake --install "build/${name}-build"
 }
 
+require_cmake_package() {
+  local package="$1"
+  if ! find "$STAGE" -type f \( -name "${package}Config.cmake" -o -name "$(echo "$package" | tr '[:upper:]' '[:lower:]')-config.cmake" \) -print -quit | grep -q .; then
+    echo "ERROR: ${package} was not installed under ${STAGE}" >&2
+    find "$STAGE" -maxdepth 4 -type d \( -name "cmake" -o -path "*/cmake/*" \) | sort >&2 || true
+    exit 1
+  fi
+}
+
 build_kf extra-cmake-modules
 build_kf karchive -DWITH_BZIP2=OFF -DWITH_LIBLZMA=OFF -DWITH_LIBZSTD=OFF
 build_kf kcodecs
+require_cmake_package KF6Codecs
 build_kf kcoreaddons
 build_kf ki18n
 build_kf kconfig
@@ -353,6 +364,7 @@ build_kf attica
 build_kf syndication
 build_kf knewstuff
 build_kf knotifications
+require_cmake_package KF6Notifications
 build_kf ktextwidgets
 build_kf kxmlgui
 build_kf kbookmarks
@@ -371,7 +383,7 @@ wget -qO build/konsole.tar.gz \
 tar xzf build/konsole.tar.gz -C build
 cmake -S "build/konsole-${KONSOLE_VERSION}" -B build/konsole-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
-  -DCMAKE_PREFIX_PATH="$STAGE" \
+  -DCMAKE_PREFIX_PATH="$KF_CMAKE_PREFIX_PATH" \
   -DCMAKE_BUILD_TYPE=Release \
   -GNinja \
   -DBUILD_TESTING=OFF \
