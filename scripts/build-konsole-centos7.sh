@@ -292,7 +292,7 @@ build_kf kguiaddons
 build_kf kwidgetsaddons
 build_kf kcolorscheme
 build_kf kconfigwidgets
-build_kf kwindowsystem
+build_kf kwindowsystem -DKWINDOWSYSTEM_WAYLAND=OFF
 build_kf kcrash
 build_kf kauth
 build_kf kjobwidgets
