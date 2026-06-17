@@ -91,8 +91,12 @@ for nvim_libdir in lib lib64; do
     cp -r "build/dist-install/${nvim_libdir}/nvim" "build/pkg/${nvim_libdir}/nvim"
   fi
 done
-if ! find build/pkg -path '*/nvim/parser/lua.so' -type f | grep -q .; then
-  echo "ERROR: bundled Lua treesitter parser not found under build/pkg" >&2
+mkdir -p build/pkg/share/nvim/runtime/parser
+while IFS= read -r parser_dir; do
+  cp -r "${parser_dir}/." build/pkg/share/nvim/runtime/parser/
+done < <(find build/dist-install -path '*/nvim/parser' -type d)
+if [ ! -f build/pkg/share/nvim/runtime/parser/lua.so ]; then
+  echo "ERROR: bundled Lua treesitter parser not found under runtime/parser" >&2
   echo "Installed parser directories:" >&2
   find build/dist-install -path '*/nvim/parser' -type d -print >&2 || true
   exit 1
@@ -136,6 +140,8 @@ chmod +x build/pkg/nvim-centos7 build/pkg/bin/nvim
 # (catches missing runtime files / dynamic linking issues before shipping).
 echo "Verifying built binary runs..."
 if ! build/pkg/nvim-centos7 --headless -u NONE \
+  +'lua assert(vim.tbl_contains(vim.api.nvim_get_runtime_file("parser/lua.*", false), vim.fn.fnamemodify("build/pkg/share/nvim/runtime/parser/lua.so", ":p")), "runtime Lua parser not found")' \
+  +'lua assert(vim.treesitter.language.add("lua"))' \
   +'lua vim.cmd("new test.lua"); vim.bo.filetype = "lua"; vim.treesitter.start()' \
   +qall!; then
   echo "ERROR: nvim-centos7 failed to run (see output above)" >&2
