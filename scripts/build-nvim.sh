@@ -39,9 +39,10 @@ make install
 cd ..
 
 echo "Packaging..."
-mkdir -p build/pkg/bin build/pkg/share/nvim
+mkdir -p build/pkg/bin build/pkg/share/nvim build/pkg/lib
 cp build/dist-install/bin/nvim build/pkg/bin/nvim
 cp -r build/dist-install/share/nvim/runtime build/pkg/share/nvim/runtime
+cp -r build/dist-install/lib/nvim build/pkg/lib/nvim
 
 # Top-level entry point: bundler runs lib/nvim/nvim directly. Keep it as a
 # thin wrapper around bin/nvim so the bin/../share/nvim/runtime layout that
@@ -52,6 +53,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 exec "$SCRIPT_DIR/bin/nvim" "$@"
 WRAPPER
 chmod +x build/pkg/nvim build/pkg/bin/nvim
+
+echo "Verifying built binary and bundled Lua parser..."
+build/pkg/nvim --headless -u NONE \
+  +'lua vim.cmd("new test.lua"); vim.bo.filetype = "lua"; vim.treesitter.start()' \
+  +qall!
 
 tar czf "dist/nvim-standalone-${NVIM_VERSION}-x86_64-linux.tar.gz" -C build/pkg .
 sha256sum dist/*.tar.gz > dist/SHA256SUMS

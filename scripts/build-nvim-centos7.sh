@@ -82,9 +82,10 @@ make install
 cd ..
 
 echo "Packaging..."
-mkdir -p build/pkg/bin build/pkg/share/nvim
+mkdir -p build/pkg/bin build/pkg/share/nvim build/pkg/lib
 cp build/dist-install/bin/nvim build/pkg/bin/nvim
 cp -r build/dist-install/share/nvim/runtime build/pkg/share/nvim/runtime
+cp -r build/dist-install/lib/nvim build/pkg/lib/nvim
 
 # OL7's ncurses (5.9, ~2011) terminfo lacks the "Ms" (OSC 52 clipboard)
 # capability. Without it, Neovim queries the terminal directly on startup via
@@ -123,7 +124,9 @@ chmod +x build/pkg/nvim-centos7 build/pkg/bin/nvim
 # Smoke test: confirm the binary actually runs in this glibc 2.17 environment
 # (catches missing runtime files / dynamic linking issues before shipping).
 echo "Verifying built binary runs..."
-if ! build/pkg/nvim-centos7 --headless -es +q; then
+if ! build/pkg/nvim-centos7 --headless -u NONE \
+  +'lua vim.cmd("new test.lua"); vim.bo.filetype = "lua"; vim.treesitter.start()' \
+  +qall!; then
   echo "ERROR: nvim-centos7 failed to run (see output above)" >&2
   exit 1
 fi
