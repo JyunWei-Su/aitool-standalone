@@ -347,11 +347,25 @@ build_kf() {
 
 require_cmake_package() {
   local package="$1"
-  if ! find "$STAGE" -type f \( -name "${package}Config.cmake" -o -name "$(echo "$package" | tr '[:upper:]' '[:lower:]')-config.cmake" \) -print -quit | grep -q .; then
+  local config_path
+  config_path=$(find "$STAGE" -type f \( -name "${package}Config.cmake" -o -name "$(echo "$package" | tr '[:upper:]' '[:lower:]')-config.cmake" \) -print -quit)
+  if [ -z "$config_path" ]; then
     echo "ERROR: ${package} was not installed under ${STAGE}" >&2
     find "$STAGE" -maxdepth 4 -type d \( -name "cmake" -o -path "*/cmake/*" \) | sort >&2 || true
     exit 1
   fi
+  echo "  ${package}: ${config_path}"
+}
+
+cmake_package_dir() {
+  local package="$1"
+  local config_path
+  config_path=$(find "$STAGE" -type f \( -name "${package}Config.cmake" -o -name "$(echo "$package" | tr '[:upper:]' '[:lower:]')-config.cmake" \) -print -quit)
+  if [ -z "$config_path" ]; then
+    echo "ERROR: ${package} was not installed under ${STAGE}" >&2
+    exit 1
+  fi
+  dirname "$config_path"
 }
 
 build_kf extra-cmake-modules
@@ -381,6 +395,7 @@ build_kf syndication
 build_kf knewstuff
 build_kf knotifications
 require_cmake_package KF6Notifications
+KF6Notifications_DIR="$(cmake_package_dir KF6Notifications)"
 build_kf ktextwidgets
 build_kf kxmlgui
 build_kf kbookmarks
@@ -400,6 +415,7 @@ tar xzf build/konsole.tar.gz -C build
 cmake -S "build/konsole-${KONSOLE_VERSION}" -B build/konsole-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
   -DCMAKE_PREFIX_PATH="$KF_CMAKE_PREFIX_PATH" \
+  -DKF6Notifications_DIR="$KF6Notifications_DIR" \
   -DCMAKE_BUILD_TYPE=Release \
   -GNinja \
   -DBUILD_TESTING=OFF \
