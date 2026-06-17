@@ -98,14 +98,30 @@ export PATH="$STAGE/bin:$PATH"
 export PKG_CONFIG_PATH="$STAGE/lib/pkgconfig:$STAGE/lib64/pkgconfig"
 echo "cmake: $(cmake --version | head -1)"
 
+download_with_fallback() {
+  local output="$1"; shift
+  local url
+  for url in "$@"; do
+    echo "Downloading ${url}"
+    rm -f "$output"
+    if wget --progress=dot:giga -O "$output" "$url"; then
+      return 0
+    fi
+  done
+  echo "ERROR: failed to download ${output}" >&2
+  return 1
+}
+
 # --------------------------------------------------------------------------
 # Phase 1.5: FreeType from source
 # CentOS 7 ships FreeType 2.8.0; Qt 6.7 uses FT_Done_MM_Var added in 2.9.
 # Build without HarfBuzz to avoid the FreeType↔HarfBuzz circular dependency.
 # --------------------------------------------------------------------------
 echo "--- Phase 1.5: FreeType ${FREETYPE_VERSION} ---"
-wget -qO build/freetype.tar.xz \
-  "https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.xz"
+download_with_fallback build/freetype.tar.xz \
+  "https://download.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.xz" \
+  "https://download-mirror.savannah.gnu.org/releases/freetype/freetype-${FREETYPE_VERSION}.tar.xz" \
+  "https://sourceforge.net/projects/freetype/files/freetype2/${FREETYPE_VERSION}/freetype-${FREETYPE_VERSION}.tar.xz/download"
 tar xJf build/freetype.tar.xz -C build
 cmake -S "build/freetype-${FREETYPE_VERSION}" -B build/freetype-build \
   -DCMAKE_INSTALL_PREFIX="$STAGE" \
