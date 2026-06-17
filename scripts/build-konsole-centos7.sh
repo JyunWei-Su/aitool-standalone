@@ -117,6 +117,21 @@ cmake --build build/freetype-build -j"$(nproc)"
 cmake --install build/freetype-build
 
 # --------------------------------------------------------------------------
+# Phase 1.6: xcb-util-cursor from source
+# Qt 6.5+ xcb platform plugin requires xcb-cursor; not packaged in OL7.
+# Build from source so Qt finds it via PKG_CONFIG_PATH at configure time.
+# The resulting shared lib is bundled in Phase 5 (copied from $STAGE/lib).
+# --------------------------------------------------------------------------
+echo "--- Phase 1.6: xcb-util-cursor ---"
+wget -qO build/xcb-util-cursor.tar.gz \
+  "https://xcb.freedesktop.org/dist/xcb-util-cursor-0.1.4.tar.gz"
+tar xzf build/xcb-util-cursor.tar.gz -C build
+( cd build/xcb-util-cursor-0.1.4 \
+  && ./configure --prefix="$STAGE" \
+  && make -j"$(nproc)" \
+  && make install )
+
+# --------------------------------------------------------------------------
 # Phase 2: Qt 6 (qtbase + qtsvg)
 # qtbase covers Core, Gui, Widgets, DBus, Network, PrintSupport, and the
 # xcb platform plugin for X11.  qtsvg is required for KDE icon themes.
@@ -230,6 +245,19 @@ cmake -S "build/qttools-everywhere-src-${QT_VERSION}" -B build/qttools-build \
   -DFEATURE_qtdiag=OFF
 cmake --build build/qttools-build -j"$(nproc)"
 cmake --install build/qttools-build
+
+# Confirm Qt was built with xcb support.  qtx11extras_p.h is a private
+# header installed only when the xcb platform plugin is fully configured
+# (requires xcb-util-cursor).  kdbusaddons unconditionally includes it on
+# Linux, so a missing header here means a guaranteed kdbusaddons failure.
+if [ ! -f "$STAGE/include/QtGui/${QT_VERSION}/QtGui/private/qtx11extras_p.h" ]; then
+  echo "ERROR: Qt xcb private headers not installed — kdbusaddons will fail" >&2
+  echo "xcb platform plugin present?" >&2
+  find "$STAGE/plugins" "$STAGE/lib/qt6/plugins" -name "libqxcb.so" 2>/dev/null \
+    | head -5 >&2 || echo "  libqxcb.so not found in staging" >&2
+  exit 1
+fi
+echo "Qt xcb private headers: OK"
 
 # --------------------------------------------------------------------------
 # Phase 3: KDE Frameworks 6
