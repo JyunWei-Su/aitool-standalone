@@ -37,11 +37,6 @@ packages:
     type: custom
     script: scripts/build-npx.sh
 
-  # ── Obsidian（自訂腳本，AppImage）──────────────────
-  - name: obsidian
-    type: custom
-    script: scripts/build-obsidian.sh
-
   # ── mdBook（二進位）─────────────────────────────────
   - name: mdbook
     type: binary

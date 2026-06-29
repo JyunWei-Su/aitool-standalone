@@ -13,7 +13,6 @@ GitHub Actions 自動打包離線工具集。本地不需要任何 `npm install`
 | [qmd](https://github.com/tobi/qmd) | 本地 CLI 語意搜尋引擎（docs / notes / code） | custom |
 | [playwright](https://github.com/microsoft/playwright) | 含瀏覽器的獨立 Playwright 執行環境 | custom |
 | [npx](https://github.com/nodejs/node) | npx wrapper，依附 bundle 內的 Node.js runtime | custom |
-| [obsidian](https://github.com/obsidianmd/obsidian-releases) | 知識管理筆記軟體，Linux AppImage | custom |
 | [mdbook](https://github.com/rust-lang/mdBook) | 將 Markdown 轉換成電子書的工具，musl 靜態二進位 | binary |
 | [nvim](https://github.com/neovim/neovim) | Neovim，原始碼建置（Oracle Linux 8 / glibc 2.28） | custom |
 
@@ -34,6 +33,7 @@ Scheduled workflow 會自動建置所有套件，並將成品上傳為 GitHub Ac
 - `bash` / `sh`：在 bundle 根目錄執行 `source setup.sh`
 - `csh` / `tcsh`：優先先 `cd` 到 bundle 根目錄再執行 `source setup.csh`
 - 若要從其他目錄 `source`，先設定 `AITOOL_BUNDLE_DIR=/path/to/bundle`
+- `config.csh`：與 `setup.csh` 同目錄，可放自訂 `csh` 設定；預設為空檔案
 
 ### bundle 內部結構
 
@@ -111,7 +111,6 @@ aitool-standalone/
 ├── scripts/
 │   ├── build-node.sh               # Node.js 自訂建置
 │   ├── build.sh                    # 標準類型通用建置腳本
-│   ├── build-obsidian.sh           # Obsidian AppImage 自訂建置
 │   ├── build-playwright.sh         # Playwright 自訂建置
 │   └── build-qmd.sh                # qmd 自訂建置
 └── .github/workflows/
@@ -126,6 +125,7 @@ aitool-standalone/
 - `aitool-standalone-bundle-<YYYYMMDD>.tar.gz` — 全套件合併包（僅 scheduled build）
 
 bundle 內同時提供 `setup.sh` 與 `setup.csh`，分別給 `bash` / `sh` 與 `csh` / `tcsh` 使用。
+`setup.csh` 會先 `source` 同目錄的 `config.csh`，再套用 PATH 與其他環境變數。
 `setup.csh` 會優先使用目前目錄，若不在 bundle 根目錄，請先設定 `AITOOL_BUNDLE_DIR`。
 
 Build summary 會列出本次打包的所有套件與版本。

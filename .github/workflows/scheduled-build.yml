@@ -258,6 +258,8 @@ jobs:
             done
           } > "$BUNDLE/LICENSE.md"
 
+          : > "$BUNDLE/config.csh"
+
           # Convenience script: source once to add bin/ to PATH
           {
             echo '#!/bin/bash'
@@ -280,6 +282,7 @@ jobs:
             echo '  endif'
             echo 'endif'
             echo 'if ($?AITOOL_BUNDLE_DIR) then'
+            echo '  source "$AITOOL_BUNDLE_DIR/config.csh"'
             echo '  setenv PATH "$AITOOL_BUNDLE_DIR/bin:$PATH"'
             echo '  setenv PLAYWRIGHT_BROWSERS_PATH "$AITOOL_BUNDLE_DIR/lib/playwright/node_modules/playwright-core/.local-browsers"'
             echo '  echo "aitool: added $AITOOL_BUNDLE_DIR/bin to PATH"'
