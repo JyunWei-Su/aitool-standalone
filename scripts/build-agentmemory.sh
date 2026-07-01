@@ -80,7 +80,18 @@ import { pipeline } from '@xenova/transformers';
   process.exit(1);
 });
 JSEOF
-EMBEDDING_MODEL="$EMBEDDING_MODEL" ./.node/bin/node prewarm-embedding.mjs
+for attempt in 1 2 3 4 5; do
+  if EMBEDDING_MODEL="$EMBEDDING_MODEL" ./.node/bin/node prewarm-embedding.mjs; then
+    break
+  fi
+  if [ "$attempt" -eq 5 ]; then
+    echo "ERROR: embedding model prewarm failed after ${attempt} attempts"
+    exit 1
+  fi
+  sleep_seconds=$((attempt * 60))
+  echo "Embedding model prewarm failed; retrying in ${sleep_seconds}s (${attempt}/5)..."
+  sleep "$sleep_seconds"
+done
 
 cat > agentmemory << 'WRAPPER'
 #!/bin/bash
