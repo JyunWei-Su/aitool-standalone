@@ -55,7 +55,11 @@ cat > package.json <<'PKG'
 PKG
 
 echo "Installing @agentmemory/agentmemory@${AGENTMEMORY_VERSION}..."
-./.node/bin/npm install "@agentmemory/agentmemory@${AGENTMEMORY_VERSION}" --omit=optional --no-fund --no-audit --ignore-scripts
+# agentmemory depends on sharp, whose native linux-x64 payload is installed via
+# optional dependencies/install scripts. Omitting either creates a bundle that
+# installs but fails at runtime with a missing sharp-linux-x64.node.
+./.node/bin/npm install "@agentmemory/agentmemory@${AGENTMEMORY_VERSION}" --include=optional --no-fund --no-audit --ignore-scripts=false
+./.node/bin/node -e "require('sharp'); console.log('sharp native module OK')"
 
 echo "Installing @xenova/transformers for local embeddings..."
 ./.node/bin/npm install "@xenova/transformers" --no-fund --no-audit --ignore-scripts
