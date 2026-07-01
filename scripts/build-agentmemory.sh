@@ -1,0 +1,117 @@
+#!/bin/bash
+set -euo pipefail
+# shellcheck source=scripts/lib-license.sh
+source "$(dirname "$0")/lib-license.sh"
+
+NODEJS_VERSION="${NODEJS_VERSION:-$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')}"
+AGENTMEMORY_VERSION="${AGENTMEMORY_VERSION:-$(curl -sL https://registry.npmjs.org/@agentmemory/agentmemory/latest | jq -r '.version')}"
+III_VERSION="${AGENTMEMORY_III_VERSION:-0.11.2}"
+EMBEDDING_MODEL="${AGENTMEMORY_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}"
+
+echo "========================================"
+echo " agentmemory Standalone Builder"
+echo " Node.js:      ${NODEJS_VERSION}"
+echo " agentmemory:  ${AGENTMEMORY_VERSION}"
+echo " iii-engine:   ${III_VERSION}"
+echo " embedding:    ${EMBEDDING_MODEL}"
+echo "========================================"
+
+mkdir -p tmp
+
+NODEJS_URL="https://nodejs.org/dist/v${NODEJS_VERSION}/node-v${NODEJS_VERSION}-linux-x64.tar.xz"
+NODEJS_ARCHIVE="tmp/node-v${NODEJS_VERSION}-linux-x64.tar.xz"
+if [ ! -f "$NODEJS_ARCHIVE" ]; then
+  echo "Downloading Node.js from ${NODEJS_URL}..."
+  wget -qO "$NODEJS_ARCHIVE" "$NODEJS_URL"
+fi
+
+III_URL="https://github.com/iii-hq/iii/releases/download/iii/v${III_VERSION}/iii-x86_64-unknown-linux-gnu.tar.gz"
+III_ARCHIVE="tmp/iii-v${III_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+if [ ! -f "$III_ARCHIVE" ]; then
+  echo "Downloading iii-engine from ${III_URL}..."
+  wget -qO "$III_ARCHIVE" "$III_URL"
+fi
+
+echo "Extracting Node.js, agentmemory, iii-engine, and embedding cache..."
+rm -rf build dist
+mkdir -p build/.node build/.iii build/.hf dist
+tar xf "$NODEJS_ARCHIVE" -C build/.node --strip-components 1
+tar xf "$III_ARCHIVE" -C build/.iii
+
+pushd build
+
+cat > package.json <<'PKG'
+{
+  "name": "agentmemory-standalone-build",
+  "private": true,
+  "overrides": {
+    "iii-sdk": "0.11.2"
+  }
+}
+PKG
+
+echo "Installing @agentmemory/agentmemory@${AGENTMEMORY_VERSION}..."
+./.node/bin/npm install "@agentmemory/agentmemory@${AGENTMEMORY_VERSION}" --omit=optional --no-fund --no-audit --ignore-scripts
+
+echo "Installing @xenova/transformers for local embeddings..."
+./.node/bin/npm install "@xenova/transformers" --no-fund --no-audit --ignore-scripts
+
+echo "Prewarming embedding model cache for ${EMBEDDING_MODEL}..."
+export HF_HOME="$PWD/.hf"
+export HF_HUB_CACHE="$PWD/.hf/hub"
+export TRANSFORMERS_CACHE="$PWD/.hf/transformers"
+export XDG_CACHE_HOME="$PWD/.hf/xdg"
+cat > /tmp/prewarm-embedding.mjs <<'JSEOF'
+import { pipeline } from '@xenova/transformers';
+
+(async () => {
+  const extractor = await pipeline('feature-extraction', process.env.EMBEDDING_MODEL);
+  await extractor(['bundle warmup'], { pooling: 'mean', normalize: true });
+})().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});
+JSEOF
+EMBEDDING_MODEL="$EMBEDDING_MODEL" ./.node/bin/node /tmp/prewarm-embedding.mjs
+
+cat > agentmemory << 'WRAPPER'
+#!/bin/bash
+set -eu
+SOURCE="$0"
+while [ -L "$SOURCE" ]; do
+  DIR="$(cd -- "$(dirname "$SOURCE")" >/dev/null 2>&1; pwd -P)"
+  SOURCE="$(readlink "$SOURCE")"
+  case "$SOURCE" in
+    /*) ;;
+    *) SOURCE="$DIR/$SOURCE" ;;
+  esac
+done
+SCRIPT_PATH="$(cd -- "$(dirname "$SOURCE")" >/dev/null 2>&1; pwd -P)"
+export PATH="$SCRIPT_PATH/.iii:$SCRIPT_PATH/.node/bin:$PATH"
+export NODE_PATH="$SCRIPT_PATH/node_modules"
+export HF_HOME="$SCRIPT_PATH/.hf"
+export HF_HUB_CACHE="$SCRIPT_PATH/.hf/hub"
+export TRANSFORMERS_CACHE="$SCRIPT_PATH/.hf/transformers"
+export XDG_CACHE_HOME="$SCRIPT_PATH/.hf/xdg"
+export HF_HUB_OFFLINE=1
+export TRANSFORMERS_OFFLINE=1
+export AGENTMEMORY_III_VERSION="${AGENTMEMORY_III_VERSION:-__III_VERSION__}"
+exec "$SCRIPT_PATH/node_modules/.bin/agentmemory" "$@"
+WRAPPER
+chmod +x agentmemory
+sed -i "s/__III_VERSION__/${III_VERSION}/g" agentmemory
+
+mkdir -p bin
+ln -s ../agentmemory bin/agentmemory
+
+popd
+
+echo "Bundling agentmemory-standalone-${AGENTMEMORY_VERSION}..."
+tar czf "dist/agentmemory-standalone-${AGENTMEMORY_VERSION}-x86_64-linux.tar.gz" -C build .
+sha256sum dist/*.tar.gz > dist/SHA256SUMS
+AGENTMEMORY_LICENSE=$(gh_license "rohitg00/agentmemory")
+printf 'name=agentmemory\nversion=%s\nlicense=%s\n' "${AGENTMEMORY_VERSION}" "${AGENTMEMORY_LICENSE}" > dist/BUILD_INFO.txt
+
+echo "=== Done ==="
+ls -lh dist/
+cat dist/SHA256SUMS

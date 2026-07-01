@@ -22,6 +22,11 @@ packages:
     type: custom
     script: scripts/build-node.sh
 
+  # ── agentmemory（自訂腳本，npm CLI + pinned iii-engine）──
+  - name: agentmemory
+    type: custom
+    script: scripts/build-agentmemory.sh
+
   # ── qmd（自訂腳本，npm 套件）────────────────────────
   - name: qmd
     type: custom
