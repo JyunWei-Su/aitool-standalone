@@ -40,6 +40,10 @@ tar xf "$III_ARCHIVE" -C build/.iii
 
 pushd build
 
+# npm is a shell script with a /usr/bin/env node shebang, so the bundled
+# Node.js must be on PATH before we invoke it.
+export PATH="$PWD/.node/bin:$PATH"
+
 cat > package.json <<'PKG'
 {
   "name": "agentmemory-standalone-build",
