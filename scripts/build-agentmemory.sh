@@ -65,7 +65,7 @@ export HF_HOME="$PWD/.hf"
 export HF_HUB_CACHE="$PWD/.hf/hub"
 export TRANSFORMERS_CACHE="$PWD/.hf/transformers"
 export XDG_CACHE_HOME="$PWD/.hf/xdg"
-cat > /tmp/prewarm-embedding.mjs <<'JSEOF'
+cat > prewarm-embedding.mjs <<'JSEOF'
 import { pipeline } from '@xenova/transformers';
 
 (async () => {
@@ -76,7 +76,7 @@ import { pipeline } from '@xenova/transformers';
   process.exit(1);
 });
 JSEOF
-EMBEDDING_MODEL="$EMBEDDING_MODEL" ./.node/bin/node /tmp/prewarm-embedding.mjs
+EMBEDDING_MODEL="$EMBEDDING_MODEL" ./.node/bin/node prewarm-embedding.mjs
 
 cat > agentmemory << 'WRAPPER'
 #!/bin/bash
