@@ -41,7 +41,7 @@ jobs:
           import yaml, json
           with open('packages.yml') as f:
               pkgs = yaml.safe_load(f)['packages']
-          custom = [p for p in pkgs if p.get('type') == 'custom']
+          custom = [p for p in pkgs if p.get('type') == 'custom' and p.get('name') != 'agentmemory']
           print(json.dumps({'include': custom}))
           ")
           echo "custom_matrix=${CUSTOM_MATRIX}" >> "$GITHUB_OUTPUT"
@@ -137,8 +137,27 @@ jobs:
           path: dist/*
           retention-days: 90
 
+  build-agentmemory-centos7:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build agentmemory for CentOS 7 in oraclelinux:7 container
+        run: |
+          docker run --rm --privileged \
+            -v "$PWD:/workspace" -w /workspace \
+            -e GH_TOKEN="${{ github.token }}" \
+            -e NODEJS_TARGET="linux-x64-glibc-217" \
+            container-registry.oracle.com/os/oraclelinux:7 \
+            bash scripts/build-agentmemory.sh
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: agentmemory-standalone-x86_64-linux
+          path: dist/*
+          retention-days: 90
+
   bundle:
-    needs: [build, build-custom, build-nvim-centos7]
+    needs: [build, build-custom, build-nvim-centos7, build-agentmemory-centos7]
     if: always() && !cancelled()
     runs-on: ubuntu-latest
     permissions:
