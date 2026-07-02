@@ -35,8 +35,29 @@ fi
 # shellcheck source=scripts/lib-license.sh
 source "$(dirname "$0")/lib-license.sh"
 
-NODEJS_VERSION="${NODEJS_VERSION:-$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')}"
 NODEJS_TARGET="${NODEJS_TARGET:-linux-x64-glibc-217}"
+if [ -z "${NODEJS_VERSION:-}" ]; then
+  case "$NODEJS_TARGET" in
+    linux-x64)
+      NODEJS_VERSION="$(curl -sL https://nodejs.org/dist/index.json | jq -r '[.[] | select(.lts != false)] | first | .version' | tr -d 'v')"
+      ;;
+    linux-x64-glibc-217)
+      NODEJS_VERSION="$(
+        curl -sL https://unofficial-builds.nodejs.org/download/release/index.json |
+          jq -r --arg target "$NODEJS_TARGET" '[.[] | select(.lts != false) | select(.files | index($target))] | first | .version' |
+          tr -d 'v'
+      )"
+      ;;
+    *)
+      echo "ERROR: unsupported NODEJS_TARGET '${NODEJS_TARGET}'" >&2
+      exit 1
+      ;;
+  esac
+fi
+if [ -z "$NODEJS_VERSION" ] || [ "$NODEJS_VERSION" = "null" ]; then
+  echo "ERROR: could not resolve Node.js version for target '${NODEJS_TARGET}'" >&2
+  exit 1
+fi
 AGENTMEMORY_VERSION="${AGENTMEMORY_VERSION:-$(curl -sL https://registry.npmjs.org/@agentmemory/agentmemory/latest | jq -r '.version')}"
 III_VERSION="${AGENTMEMORY_III_VERSION:-0.11.2}"
 EMBEDDING_MODEL="${AGENTMEMORY_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}"
