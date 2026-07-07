@@ -47,11 +47,11 @@ Scheduled workflow 會自動建置所有套件，並將成品上傳為 GitHub Ac
 
 每次透過 `bin/` 執行任一工具，wrapper 都會 append 一行到 `usage/<套件>.log`：
 
-    <UTC ISO8601 時間戳記>\t<版本號>
+    {"timestamp":"<UTC ISO8601 時間戳記>","user":"<使用者>","version":"<工具版本>","bundle_version":"<bundle 版本>"}
 
 例如：
 
-    2026-06-08T03:21:07Z	14.1.0
+    {"timestamp":"2026-06-08T03:21:07Z","user":"alice","version":"14.1.0","bundle_version":"26.7.7"}
 
 每行代表一次呼叫，**行數即為使用次數**，可藉此統計各工具的使用頻率、版本分佈、最後使用時間等。
 紀錄為 best-effort（檔案系統唯讀等情況會靜默略過），不影響工具本身執行。

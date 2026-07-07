@@ -172,16 +172,36 @@ jobs:
           BUNDLE="aitool-standalone-${DATESTAMP}"
           mkdir -p "$BUNDLE/bin" "$BUNDLE/lib" "$BUNDLE/usage"
 
-          # Sourced by every bin/ wrapper: appends one usage record per
-          # invocation ("<UTC ISO8601 timestamp>\t<version>") to
-          # usage/<tool>.log — line count doubles as the invocation count.
+          # Sourced by every bin/ wrapper: appends one JSON usage record per
+          # invocation to usage/<tool>.log. Line count doubles as the
+          # invocation count.
           # Best-effort: never fails the wrapper (e.g. read-only filesystem).
           cat > "$BUNDLE/lib/_usage.sh" <<'USAGE_LIB'
           #!/bin/bash
+          json_escape() {
+            local value="${1:-}"
+            value="${value//\\/\\\\}"
+            value="${value//\"/\\\"}"
+            value="${value//$'\n'/\\n}"
+            value="${value//$'\r'/\\r}"
+            value="${value//$'\t'/\\t}"
+            printf '%s' "$value"
+          }
+
           log_usage() {
-            local name="$1" version="$2"
+            local name="$1" version="$2" bundle_version="${3:-unknown}"
             local dir="$BUNDLE_DIR/usage"
-            { mkdir -p "$dir" && printf '%s\t%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$version" >> "$dir/$name.log"; } 2>/dev/null || true
+            local timestamp user
+            timestamp="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            user="$(id -un 2>/dev/null || printf '%s' "${USER:-unknown}")"
+            {
+              mkdir -p "$dir" &&
+              printf '{"timestamp":"%s","user":"%s","version":"%s","bundle_version":"%s"}\n' \
+                "$(json_escape "$timestamp")" \
+                "$(json_escape "$user")" \
+                "$(json_escape "$version")" \
+                "$(json_escape "$bundle_version")" >> "$dir/$name.log"
+            } 2>/dev/null || true
           }
           USAGE_LIB
 
@@ -195,7 +215,13 @@ jobs:
           SCRIPT_DIR="\$(cd "\$(dirname "\$0")" && pwd)"
           BUNDLE_DIR="\$(cd "\$SCRIPT_DIR/.." && pwd)"
           . "\$BUNDLE_DIR/lib/_usage.sh"
-          log_usage "$pkg_name" "$version"
+          log_usage "$pkg_name" "$version" "$DATESTAMP"
+          if [ "$pkg_name" = "opencode" ]; then
+            export OPENCODE_DISABLE_DEFAULT_PLUGINS=true
+            export OPENCODE_DISABLE_MODELS_FETCH=true
+            export OPENCODE_DISABLE_LSP_DOWNLOAD=true
+            export OPENCODE_DISABLE_AUTOUPDATE=true
+          fi
           exec "\$BUNDLE_DIR/lib/$pkg_name/$pkg_name" "\$@"
           WRAPPER
             chmod +x "$BUNDLE/bin/$pkg_name"
@@ -251,14 +277,14 @@ jobs:
           glibc_minor=${glibc_ver##*.}
 
           if [ -n "$glibc_major" ] && { [ "$glibc_major" -gt 2 ] || { [ "$glibc_major" -eq 2 ] && [ "$glibc_minor" -ge 28 ]; }; }; then
-            log_usage nvim "__VERSION_NVIM__"
+            log_usage nvim "__VERSION_NVIM__" "__BUNDLE_VERSION__"
             exec "$BUNDLE_DIR/lib/nvim/nvim" "$@"
           else
-            log_usage nvim-centos7 "__VERSION_NVIM_CENTOS7__"
+            log_usage nvim-centos7 "__VERSION_NVIM_CENTOS7__" "__BUNDLE_VERSION__"
             exec "$BUNDLE_DIR/lib/nvim-centos7/nvim-centos7" "$@"
           fi
           WRAPPER
-            sed -i "s/__VERSION_NVIM__/${version_nvim:-unknown}/; s/__VERSION_NVIM_CENTOS7__/${version_nvim_centos7:-unknown}/" "$BUNDLE/bin/nvim"
+            sed -i "s/__VERSION_NVIM__/${version_nvim:-unknown}/; s/__VERSION_NVIM_CENTOS7__/${version_nvim_centos7:-unknown}/; s/__BUNDLE_VERSION__/${DATESTAMP}/" "$BUNDLE/bin/nvim"
             chmod +x "$BUNDLE/bin/nvim"
           fi
 
