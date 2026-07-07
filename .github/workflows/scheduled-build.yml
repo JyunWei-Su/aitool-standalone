@@ -217,6 +217,11 @@ jobs:
           . "\$BUNDLE_DIR/lib/_usage.sh"
           log_usage "$pkg_name" "$version" "$DATESTAMP"
           if [ "$pkg_name" = "opencode" ]; then
+            export NPM_CONFIG_CACHE="\$BUNDLE_DIR/lib/opencode/npm-cache"
+            export NPM_CONFIG_PREFER_OFFLINE=true
+            export NPM_CONFIG_AUDIT=false
+            export NPM_CONFIG_FUND=false
+            export NPM_CONFIG_UPDATE_NOTIFIER=false
             export OPENCODE_DISABLE_DEFAULT_PLUGINS=true
             export OPENCODE_DISABLE_MODELS_FETCH=true
             export OPENCODE_DISABLE_LSP_DOWNLOAD=true
@@ -257,6 +262,22 @@ jobs:
               fi
             fi
           done
+
+          # opencode installs @opencode-ai/plugin into config directories at
+          # startup. Preload it into a bundle-local npm cache so startup can
+          # reuse the packaged cache while still allowing user plugins to fetch
+          # their own dependencies when network is available.
+          if [ -d "$BUNDLE/lib/opencode" ]; then
+            opencode_plugin_version=$(grep -m1 '^version=' all-packages/opencode-x86_64-linux/BUILD_INFO.txt 2>/dev/null | cut -d= -f2 || true)
+            opencode_plugin_version="${opencode_plugin_version#v}"
+            [ -n "$opencode_plugin_version" ] || opencode_plugin_version="latest"
+            mkdir -p "$BUNDLE/lib/opencode/npm-cache"
+            npm cache add "@opencode-ai/plugin@${opencode_plugin_version}" \
+              --cache "$BUNDLE/lib/opencode/npm-cache" \
+              --prefer-offline \
+              --no-audit \
+              --no-fund
+          fi
 
           # nvim: if both the OL8 (glibc >= 2.28) and OL7/CentOS7 (glibc 2.17)
           # builds are present, replace bin/nvim with a dispatcher that picks
