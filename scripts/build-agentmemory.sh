@@ -60,6 +60,7 @@ if [ -z "$NODEJS_VERSION" ] || [ "$NODEJS_VERSION" = "null" ]; then
 fi
 AGENTMEMORY_VERSION="${AGENTMEMORY_VERSION:-$(curl -sL https://registry.npmjs.org/@agentmemory/agentmemory/latest | jq -r '.version')}"
 III_VERSION="${AGENTMEMORY_III_VERSION:-0.11.2}"
+III_TARGET="${AGENTMEMORY_III_TARGET:-x86_64-unknown-linux-musl}"
 EMBEDDING_MODEL="${AGENTMEMORY_EMBEDDING_MODEL:-Xenova/all-MiniLM-L6-v2}"
 
 echo "========================================"
@@ -68,6 +69,7 @@ echo " Node.js:      ${NODEJS_VERSION}"
 echo " Node target:  ${NODEJS_TARGET}"
 echo " agentmemory:  ${AGENTMEMORY_VERSION}"
 echo " iii-engine:   ${III_VERSION}"
+echo " iii target:   ${III_TARGET}"
 echo " embedding:    ${EMBEDDING_MODEL}"
 echo "========================================"
 
@@ -93,8 +95,8 @@ if [ ! -f "$NODEJS_ARCHIVE" ]; then
   wget -qO "$NODEJS_ARCHIVE" "$NODEJS_URL"
 fi
 
-III_URL="https://github.com/iii-hq/iii/releases/download/iii/v${III_VERSION}/iii-x86_64-unknown-linux-gnu.tar.gz"
-III_ARCHIVE="tmp/iii-v${III_VERSION}-x86_64-unknown-linux-gnu.tar.gz"
+III_URL="https://github.com/iii-hq/iii/releases/download/iii/v${III_VERSION}/iii-${III_TARGET}.tar.gz"
+III_ARCHIVE="tmp/iii-v${III_VERSION}-${III_TARGET}.tar.gz"
 if [ ! -f "$III_ARCHIVE" ]; then
   echo "Downloading iii-engine from ${III_URL}..."
   wget -qO "$III_ARCHIVE" "$III_URL"
@@ -134,12 +136,12 @@ export PATH="$PWD/.node/bin:$PATH"
 export LD_LIBRARY_PATH="$PWD/lib:${LD_LIBRARY_PATH:-}"
 ./.node/bin/node -e "console.log('node runtime OK:', process.version)"
 
-cat > package.json <<'PKG'
+cat > package.json <<PKG
 {
   "name": "agentmemory-standalone-build",
   "private": true,
   "overrides": {
-    "iii-sdk": "0.11.2"
+    "iii-sdk": "${III_VERSION}"
   }
 }
 PKG
